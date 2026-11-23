@@ -59,12 +59,12 @@ public class AdminDashboardPanel extends JPanel implements MainFrame.Refreshable
         statsGrid.setOpaque(false);
         statsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
 
-        usersCard = new StatsCard("\uD83D\uDC65", "0", "Total Users", FindBackTheme.PRIMARY);
-        lostCard = new StatsCard("\uD83D\uDCE6", "0", "Lost Reports", FindBackTheme.DANGER);
-        foundCard = new StatsCard("\uD83D\uDD0E", "0", "Found Reports", FindBackTheme.SECONDARY);
-        matchesCard = new StatsCard("\uD83C\uDFAF", "0", "Smart Matches", FindBackTheme.WARNING);
-        claimsCard = new StatsCard("\uD83D\uDD12", "0", "Pending Claims", new Color(139, 92, 246));
-        recoveredCard = new StatsCard("\u2705", "0", "Recovered Items", FindBackTheme.SUCCESS);
+        usersCard = new StatsCard("users", "0", "Total Users", FindBackTheme.PRIMARY);
+        lostCard = new StatsCard("box", "0", "Lost Reports", FindBackTheme.DANGER);
+        foundCard = new StatsCard("search", "0", "Found Reports", FindBackTheme.SECONDARY);
+        matchesCard = new StatsCard("target", "0", "Smart Matches", FindBackTheme.WARNING);
+        claimsCard = new StatsCard("lock", "0", "Pending Claims", new Color(139, 92, 246));
+        recoveredCard = new StatsCard("check", "0", "Recovered Items", FindBackTheme.SUCCESS);
 
         statsGrid.add(usersCard);
         statsGrid.add(lostCard);

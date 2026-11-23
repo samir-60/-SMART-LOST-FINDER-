@@ -80,13 +80,42 @@ public class ClaimsPanel extends JPanel implements MainFrame.Refreshable {
         sb.append("Claim ID: #").append(c.getId()).append("\n");
         sb.append("Status: ").append(c.getStatus()).append("\n");
         sb.append("Lost Item: ").append(c.getLostTitle()).append("\n");
-        sb.append("Found Item: ").append(c.getFoundTitle()).append("\n\n");
-        sb.append("Your Submitted Ownership Evidence:\n").append(c.getProofDescription()).append("\n\n");
+        sb.append("Found Item: ").append(c.getFoundTitle()).append("\n");
+        String fPhone = c.getFinderPhone();
+        if (fPhone != null && !fPhone.isEmpty()) {
+            sb.append("Finder Contact (WhatsApp): ").append(fPhone).append(" (").append(c.getFinderName()).append(")\n");
+        }
+        sb.append("\nYour Submitted Ownership Evidence:\n").append(c.getProofDescription()).append("\n\n");
         if (c.getAdminRemarks() != null && !c.getAdminRemarks().isEmpty()) {
-            sb.append("Campus Staff Verification Remarks:\n").append(c.getAdminRemarks());
+            sb.append("Campus Staff Verification Remarks:\n").append(c.getAdminRemarks()).append("\n");
         }
 
-        JOptionPane.showMessageDialog(this, sb.toString(), "Claim Details & Verification Status", JOptionPane.INFORMATION_MESSAGE);
+        Object[] options = (fPhone != null && !fPhone.isEmpty()) ?
+                new Object[]{"Chat on WhatsApp", "Close"} : new Object[]{"Close"};
+
+        int choice = JOptionPane.showOptionDialog(this, sb.toString(), "Claim Details & Verification Status",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+
+        if (choice == 0 && fPhone != null && !fPhone.isEmpty()) {
+            openWhatsAppChat(fPhone);
+        }
+    }
+
+    private void openWhatsAppChat(String phone) {
+        try {
+            String cleanNumber = phone.replaceAll("[^0-9]", "");
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(new java.net.URI("https://wa.me/" + cleanNumber));
+            } else {
+                java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(phone);
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+                JOptionPane.showMessageDialog(this, "WhatsApp number copied to clipboard: " + phone, "WhatsApp Contact", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception ex) {
+            java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(phone);
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+            JOptionPane.showMessageDialog(this, "WhatsApp number copied to clipboard: " + phone, "WhatsApp Contact", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
     @Override

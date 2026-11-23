@@ -68,10 +68,10 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
         statsRow.setOpaque(false);
         statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
 
-        lostCard = new StatsCard("\uD83D\uDCE6", "0", "Total Lost Items", FindBackTheme.DANGER);
-        foundCard = new StatsCard("\uD83D\uDD0E", "0", "Total Found Items", FindBackTheme.SECONDARY);
-        matchesCard = new StatsCard("\uD83C\uDFAF", "0", "Potential Matches", FindBackTheme.WARNING);
-        recoveredCard = new StatsCard("\u2705", "0", "Recovered Items", FindBackTheme.SUCCESS);
+        lostCard = new StatsCard("box", "0", "Total Lost Items", FindBackTheme.DANGER);
+        foundCard = new StatsCard("search", "0", "Total Found Items", FindBackTheme.SECONDARY);
+        matchesCard = new StatsCard("target", "0", "Potential Matches", FindBackTheme.WARNING);
+        recoveredCard = new StatsCard("check", "0", "Recovered Items", FindBackTheme.SUCCESS);
 
         statsRow.add(lostCard);
         statsRow.add(foundCard);
@@ -156,8 +156,9 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
         recoveredCard.setValue(String.valueOf(handoverService.countRecovered()));
 
         User user = SessionManager.getInstance().getCurrentUser();
-        List<Match> userMatches = (user != null) ? matchingService.getMatchesForUser(user.getId()) : matchingService.getHighConfidenceMatches();
-        matchesCard.setValue(String.valueOf(userMatches.size()));
+        List<Match> userMatches = (user != null) ? matchingService.getMatchesForUser(user.getId()) : java.util.Collections.emptyList();
+        List<Match> displayMatches = !userMatches.isEmpty() ? userMatches : matchingService.getAllMatches();
+        matchesCard.setValue(String.valueOf(displayMatches.size()));
 
         // Populate Lost Table
         recentLostModel.setRowCount(0);
@@ -187,7 +188,7 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
 
         // Populate Matches Table
         matchesModel.setRowCount(0);
-        for (Match m : userMatches) {
+        for (Match m : displayMatches) {
             String conf = m.getTotalScore() >= 85 ? "Strong Match" : "Possible Match";
             matchesModel.addRow(new Object[]{
                     m.getLostTitle() != null ? m.getLostTitle() : ("Lost #" + m.getLostReportId()),

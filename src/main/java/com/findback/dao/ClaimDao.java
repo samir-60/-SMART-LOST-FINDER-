@@ -15,11 +15,14 @@ public class ClaimDao {
     private static final Logger log = LoggerFactory.getLogger(ClaimDao.class);
 
     private static final String BASE_SELECT =
-            "SELECT c.*, u.full_name AS claimant_name, lr.title AS lost_title, fr.title AS found_title " +
+            "SELECT c.*, u.full_name AS claimant_name, u.phone_number AS claimant_phone, " +
+            "lr.title AS lost_title, fr.title AS found_title, " +
+            "fu.full_name AS finder_name, fu.phone_number AS finder_phone " +
             "FROM claims c " +
             "LEFT JOIN users u ON c.claimant_id = u.id " +
             "LEFT JOIN item_reports lr ON c.lost_report_id = lr.id " +
-            "LEFT JOIN item_reports fr ON c.found_report_id = fr.id ";
+            "LEFT JOIN item_reports fr ON c.found_report_id = fr.id " +
+            "LEFT JOIN users fu ON fr.user_id = fu.id ";
 
     public Optional<Claim> findById(Long id) {
         String sql = BASE_SELECT + "WHERE c.id = ?";
@@ -169,8 +172,11 @@ public class ClaimDao {
         if (ut != null) c.setUpdatedAt(ut.toLocalDateTime());
 
         try { c.setClaimantName(rs.getString("claimant_name")); } catch (Exception ignore) {}
+        try { c.setClaimantPhone(rs.getString("claimant_phone")); } catch (Exception ignore) {}
         try { c.setLostTitle(rs.getString("lost_title")); } catch (Exception ignore) {}
         try { c.setFoundTitle(rs.getString("found_title")); } catch (Exception ignore) {}
+        try { c.setFinderName(rs.getString("finder_name")); } catch (Exception ignore) {}
+        try { c.setFinderPhone(rs.getString("finder_phone")); } catch (Exception ignore) {}
 
         return c;
     }

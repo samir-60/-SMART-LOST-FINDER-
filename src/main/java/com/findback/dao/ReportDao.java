@@ -17,7 +17,7 @@ public class ReportDao {
     private static final Logger log = LoggerFactory.getLogger(ReportDao.class);
 
     private static final String BASE_SELECT =
-            "SELECT r.*, u.full_name AS user_name, c.name AS category_name, l.name AS location_name " +
+            "SELECT r.*, u.full_name AS user_name, u.phone_number AS user_phone, c.name AS category_name, l.name AS location_name " +
             "FROM item_reports r " +
             "LEFT JOIN users u ON r.user_id = u.id " +
             "LEFT JOIN categories c ON r.category_id = c.id " +
@@ -317,6 +317,7 @@ public class ReportDao {
         if (ut != null) r.setUpdatedAt(ut.toLocalDateTime());
 
         try { r.setUserName(rs.getString("user_name")); } catch (Exception ignore) {}
+        try { r.setUserPhone(rs.getString("user_phone")); } catch (Exception ignore) {}
         try { r.setCategoryName(rs.getString("category_name")); } catch (Exception ignore) {}
         try { r.setLocationName(rs.getString("location_name")); } catch (Exception ignore) {}
 

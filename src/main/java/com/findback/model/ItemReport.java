@@ -32,6 +32,8 @@ public class ItemReport {
     private String userName;
     private String categoryName;
     private String locationName;
+    private String contactPhone;
+    private String userPhone;
 
     public ItemReport() {
     }
@@ -217,5 +219,24 @@ public class ItemReport {
 
     public void setLocationName(String locationName) {
         this.locationName = locationName;
+    }
+
+    public String getContactPhone() {
+        if (contactPhone != null && !contactPhone.trim().isEmpty()) {
+            return contactPhone.trim();
+        }
+        return userPhone != null ? userPhone.trim() : "";
+    }
+
+    public void setContactPhone(String contactPhone) {
+        this.contactPhone = contactPhone;
+    }
+
+    public String getUserPhone() {
+        return userPhone;
+    }
+
+    public void setUserPhone(String userPhone) {
+        this.userPhone = userPhone;
     }
 }

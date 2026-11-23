@@ -140,7 +140,7 @@ public class FoundReportPanel extends JPanel implements MainFrame.Refreshable {
         gbc.gridx = 1; gbc.gridy = 7; gbc.gridwidth = 2;
         JPanel imgPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         imgPanel.setOpaque(false);
-        JButton uploadBtn = FindBackTheme.createStyledButton("\uD83D\uDCF7 Upload Image...", FindBackTheme.CARD, FindBackTheme.PRIMARY);
+        JButton uploadBtn = FindBackTheme.createStyledButton("Upload Photo...", FindBackTheme.CARD, FindBackTheme.PRIMARY);
         uploadBtn.setBorder(BorderFactory.createLineBorder(FindBackTheme.BORDER));
         uploadBtn.addActionListener(e -> chooseImage());
         imagePreviewLabel = new JLabel("No image selected");

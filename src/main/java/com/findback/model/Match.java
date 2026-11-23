@@ -30,6 +30,11 @@ public class Match {
     private String foundColor;
     private String lostCategory;
     private String foundCategory;
+    private String finderName;
+    private String finderPhone;
+    private String foundLocation;
+    private String foundImage;
+    private String lostImage;
 
     public Match() {
     }
@@ -207,5 +212,45 @@ public class Match {
 
     public void setFoundCategory(String foundCategory) {
         this.foundCategory = foundCategory;
+    }
+
+    public String getFinderName() {
+        return finderName != null ? finderName : "Campus Community Member";
+    }
+
+    public void setFinderName(String finderName) {
+        this.finderName = finderName;
+    }
+
+    public String getFinderPhone() {
+        return finderPhone != null ? finderPhone : "";
+    }
+
+    public void setFinderPhone(String finderPhone) {
+        this.finderPhone = finderPhone;
+    }
+
+    public String getFoundLocation() {
+        return foundLocation != null ? foundLocation : "Metropolitan University Campus";
+    }
+
+    public void setFoundLocation(String foundLocation) {
+        this.foundLocation = foundLocation;
+    }
+
+    public String getFoundImage() {
+        return foundImage;
+    }
+
+    public void setFoundImage(String foundImage) {
+        this.foundImage = foundImage;
+    }
+
+    public String getLostImage() {
+        return lostImage;
+    }
+
+    public void setLostImage(String lostImage) {
+        this.lostImage = lostImage;
     }
 }

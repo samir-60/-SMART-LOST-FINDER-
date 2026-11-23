@@ -80,7 +80,7 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         colorFilterField.putClientProperty("JTextField.placeholderText", "Color");
         filterCard.add(colorFilterField);
 
-        JButton searchBtn = FindBackTheme.createPrimaryButton("\uD83D\uDD0D Search");
+        JButton searchBtn = FindBackTheme.createPrimaryButton("Search");
         searchBtn.addActionListener(e -> applySearch());
         filterCard.add(searchBtn);
 
@@ -240,9 +240,64 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         sb.append("Status: ").append(r.getStatus()).append("\n");
         if (r.getCustodyStatus() != null) sb.append("Custody: ").append(r.getCustodyStatus()).append("\n");
         if (r.getImagePath() != null) sb.append("Photo: Uploaded (").append(r.getImagePath()).append(")\n");
+        String contact = r.getContactPhone();
+        if (contact != null && !contact.isEmpty()) {
+            sb.append("Reporter / WhatsApp: ").append(contact).append("\n");
+        }
         sb.append("\nDescription:\n").append(r.getDescription());
 
-        JOptionPane.showMessageDialog(this, sb.toString(), "Item Report Details", JOptionPane.INFORMATION_MESSAGE);
+        Object[] options;
+        if (contact != null && !contact.isEmpty()) {
+            options = new Object[]{"Chat on WhatsApp", "Submit Claim", "Close"};
+        } else {
+            options = new Object[]{"Submit Claim", "Close"};
+        }
+
+        int choice = JOptionPane.showOptionDialog(this, sb.toString(), "Item Report Details",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+
+        if (choice == 0 && contact != null && !contact.isEmpty()) {
+            openWhatsAppChat(contact);
+        } else if ((choice == 1 && contact != null && !contact.isEmpty()) || (choice == 0 && (contact == null || contact.isEmpty()))) {
+            submitClaimDirectly(r);
+        }
+    }
+
+    private void openWhatsAppChat(String phone) {
+        try {
+            String cleanNumber = phone.replaceAll("[^0-9]", "");
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(new java.net.URI("https://wa.me/" + cleanNumber));
+            } else {
+                java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(phone);
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+                JOptionPane.showMessageDialog(this, "WhatsApp number copied to clipboard: " + phone, "WhatsApp Contact", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception ex) {
+            java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(phone);
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+            JOptionPane.showMessageDialog(this, "WhatsApp number copied to clipboard: " + phone, "WhatsApp Contact", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private void submitClaimDirectly(ItemReport r) {
+        if (!r.isFound()) {
+            JOptionPane.showMessageDialog(this, "Claims can only be filed against items reported as Found.", "Notice", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        User user = SessionManager.getInstance().getCurrentUser();
+        if (user == null) return;
+        String proof = JOptionPane.showInputDialog(this,
+                "Enter confidential ownership evidence for '" + r.getTitle() + "':\n(e.g. Serial number, specific engravings, markings, or inside contents)",
+                "Claim Found Belonging", JOptionPane.QUESTION_MESSAGE);
+        if (proof != null && !proof.trim().isEmpty()) {
+            try {
+                claimService.submitClaim(user.getId(), r.getId(), r.getId(), null, proof.trim(), null);
+                JOptionPane.showMessageDialog(this, "Ownership claim registered successfully! Campus staff and the finder will verify.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Claim error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     @Override

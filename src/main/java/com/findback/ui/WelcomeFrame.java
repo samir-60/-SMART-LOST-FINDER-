@@ -267,17 +267,13 @@ public class WelcomeFrame extends JFrame {
             }
         };
         badge.setOpaque(false);
-        badge.setBorder(new EmptyBorder(2, 10, 2, 12));
+        badge.setBorder(new EmptyBorder(4, 14, 4, 14));
         badge.setMaximumSize(new Dimension(420, 32));
-
-        JLabel iconLabel = new JLabel("🎓");
-        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
 
         JLabel textLabel = new JLabel("METROPOLITAN UNIVERSITY • SYLHET, BANGLADESH");
         textLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
         textLabel.setForeground(new Color(224, 242, 254));
 
-        badge.add(iconLabel);
         badge.add(textLabel);
         return badge;
     }
@@ -397,13 +393,15 @@ public class WelcomeFrame extends JFrame {
         grid.setMaximumSize(new Dimension(460, 130));
 
         String[][] items = {
-                {"\uD83C\uDF92", "Backpack"}, {"\uD83D\uDCB0", "Wallet"},
-                {"\uD83D\uDD11", "Keys"}, {"\uD83C\uDFA7", "Headphones"},
-                {"\uD83D\uDCF1", "Phone"}, {"\uD83D\uDCDA", "Books"},
-                {"\uD83E\uDEAA", "ID Card"}, {"\u231A", "Watch"}
+                {"backpack", "Backpack"}, {"wallet", "Wallet"},
+                {"keys", "Keys"}, {"headphones", "Headphones"},
+                {"phone", "Phone"}, {"books", "Books"},
+                {"id_card", "ID Card"}, {"watch", "Watch"}
         };
 
         for (String[] item : items) {
+            final String itemKey = item[0];
+            final String itemName = item[1];
             JPanel cell = new JPanel(new BorderLayout(0, 4)) {
                 private boolean hovered = false;
 
@@ -448,11 +446,25 @@ public class WelcomeFrame extends JFrame {
             cell.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             cell.setBorder(new EmptyBorder(8, 6, 8, 6));
 
-            JLabel iconLabel = new JLabel(item[0], SwingConstants.CENTER);
-            iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 24));
-            cell.add(iconLabel, BorderLayout.CENTER);
+            JComponent iconComp = new JComponent() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                    g2.setColor(Color.WHITE);
+                    paintItemVectorIcon(g2, itemKey, getWidth(), getHeight());
+                    g2.dispose();
+                }
 
-            JLabel nameLabel = new JLabel(item[1], SwingConstants.CENTER);
+                @Override
+                public Dimension getPreferredSize() {
+                    return new Dimension(40, 26);
+                }
+            };
+            cell.add(iconComp, BorderLayout.CENTER);
+
+            JLabel nameLabel = new JLabel(itemName, SwingConstants.CENTER);
             nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
             nameLabel.setForeground(new Color(224, 242, 254));
             cell.add(nameLabel, BorderLayout.SOUTH);
@@ -460,6 +472,60 @@ public class WelcomeFrame extends JFrame {
             grid.add(cell);
         }
         return grid;
+    }
+
+    private static void paintItemVectorIcon(Graphics2D g2, String key, int w, int h) {
+        int cx = w / 2;
+        int cy = h / 2;
+        switch (key) {
+            case "backpack":
+                g2.drawRoundRect(cx - 9, cy - 7, 18, 20, 5, 5);
+                g2.drawArc(cx - 5, cy - 12, 10, 8, 0, 180);
+                g2.drawRoundRect(cx - 6, cy + 3, 12, 8, 3, 3);
+                break;
+            case "wallet":
+                g2.drawRoundRect(cx - 11, cy - 7, 22, 16, 4, 4);
+                g2.drawLine(cx - 11, cy - 1, cx + 11, cy - 1);
+                g2.drawRoundRect(cx + 3, cy - 4, 6, 6, 2, 2);
+                break;
+            case "keys":
+                g2.drawOval(cx - 9, cy - 8, 10, 10);
+                g2.drawLine(cx + 1, cy - 2, cx + 10, cy + 7);
+                g2.drawLine(cx + 6, cy + 3, cx + 9, cy);
+                g2.drawLine(cx + 8, cy + 5, cx + 11, cy + 2);
+                break;
+            case "headphones":
+                g2.drawArc(cx - 10, cy - 10, 20, 18, 0, 180);
+                g2.drawRoundRect(cx - 11, cy - 2, 4, 10, 2, 2);
+                g2.drawRoundRect(cx + 7, cy - 2, 4, 10, 2, 2);
+                break;
+            case "phone":
+                g2.drawRoundRect(cx - 7, cy - 10, 14, 21, 3, 3);
+                g2.drawLine(cx - 3, cy - 7, cx + 3, cy - 7);
+                g2.drawOval(cx - 2, cy + 6, 4, 4);
+                break;
+            case "books":
+                g2.drawRoundRect(cx - 9, cy - 7, 18, 5, 2, 2);
+                g2.drawRoundRect(cx - 11, cy - 1, 22, 5, 2, 2);
+                g2.drawRoundRect(cx - 8, cy + 5, 16, 5, 2, 2);
+                break;
+            case "id_card":
+                g2.drawRoundRect(cx - 11, cy - 8, 22, 16, 3, 3);
+                g2.drawRect(cx - 8, cy - 4, 5, 5);
+                g2.drawLine(cx - 1, cy - 3, cx + 7, cy - 3);
+                g2.drawLine(cx - 1, cy, cx + 7, cy);
+                break;
+            case "watch":
+                g2.drawOval(cx - 6, cy - 6, 12, 12);
+                g2.drawRoundRect(cx - 3, cy - 11, 6, 5, 2, 2);
+                g2.drawRoundRect(cx - 3, cy + 6, 6, 5, 2, 2);
+                g2.drawLine(cx, cy, cx, cy - 3);
+                g2.drawLine(cx, cy, cx + 3, cy);
+                break;
+            default:
+                g2.drawOval(cx - 6, cy - 6, 12, 12);
+                break;
+        }
     }
 
     /**
@@ -489,10 +555,10 @@ public class WelcomeFrame extends JFrame {
         card.add(Box.createVerticalStrut(20));
 
         String[][] steps = {
-                {"\uD83D\uDCDD", "1. Report Belonging", "Submit a lost or found report with details, category, location, and photo."},
-                {"\u2728", "2. Smart Matching", "Our weighted rule engine compares category, location, date, color, and description."},
-                {"\uD83D\uDD14", "3. In-App Notification", "Get instant alerts whenever a high-confidence match is discovered."},
-                {"\uD83E\uDD1D", "4. Verified Handover", "Submit ownership proof, receive administrative review, and retrieve item."}
+                {"1", "Report Belonging", "Submit a lost or found report with details, category, location, and photo."},
+                {"2", "Smart Matching", "Our weighted rule engine compares category, location, date, color, and description."},
+                {"3", "In-App Notification", "Get instant alerts whenever a high-confidence match is discovered."},
+                {"4", "Verified Handover", "Submit ownership proof, receive administrative review, and retrieve item."}
         };
 
         for (int i = 0; i < steps.length; i++) {
@@ -525,14 +591,30 @@ public class WelcomeFrame extends JFrame {
         return wrapper;
     }
 
-    private JPanel createStepRow(String icon, String title, String desc) {
+    private JPanel createStepRow(String stepNum, String title, String desc) {
         JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setOpaque(false);
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 24));
-        row.add(iconLabel, BorderLayout.WEST);
+        // Circular numbered badge
+        JLabel numBadge = new JLabel(stepNum, SwingConstants.CENTER) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(239, 246, 255));
+                g2.fillOval(0, 0, getWidth() - 1, getHeight() - 1);
+                g2.setColor(new Color(37, 99, 235));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawOval(0, 0, getWidth() - 1, getHeight() - 1);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        numBadge.setFont(FindBackTheme.getHeaderFont(12));
+        numBadge.setForeground(new Color(37, 99, 235));
+        numBadge.setPreferredSize(new Dimension(28, 28));
+        row.add(numBadge, BorderLayout.WEST);
 
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));

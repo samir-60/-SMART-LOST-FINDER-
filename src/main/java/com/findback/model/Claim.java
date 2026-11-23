@@ -25,8 +25,11 @@ public class Claim {
 
     // ── Transient display fields ────────────────────────────────────────
     private String claimantName;
+    private String claimantPhone;
     private String lostTitle;
     private String foundTitle;
+    private String finderName;
+    private String finderPhone;
 
     public Claim() {
     }
@@ -180,5 +183,29 @@ public class Claim {
 
     public void setFoundTitle(String foundTitle) {
         this.foundTitle = foundTitle;
+    }
+
+    public String getClaimantPhone() {
+        return claimantPhone != null ? claimantPhone : "";
+    }
+
+    public void setClaimantPhone(String claimantPhone) {
+        this.claimantPhone = claimantPhone;
+    }
+
+    public String getFinderName() {
+        return finderName != null ? finderName : "Campus Community Member";
+    }
+
+    public void setFinderName(String finderName) {
+        this.finderName = finderName;
+    }
+
+    public String getFinderPhone() {
+        return finderPhone != null ? finderPhone : "";
+    }
+
+    public void setFinderPhone(String finderPhone) {
+        this.finderPhone = finderPhone;
     }
 }

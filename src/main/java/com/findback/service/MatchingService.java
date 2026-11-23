@@ -195,6 +195,37 @@ public class MatchingService {
     }
 
     /**
+     * Gets all matches across the entire campus.
+     */
+    public List<Match> getAllMatches() {
+        return matchDao.findAll();
+    }
+
+    /**
+     * Searches and ranks all active open found items against an ad-hoc lost item criteria
+     * (used by the Instant AI Smart Search tool).
+     */
+    public List<Match> searchFoundMatches(ItemReport queryLost) {
+        List<ItemReport> openFound = reportDao.findByTypeAndStatus(ReportType.FOUND, ReportStatus.OPEN);
+        List<Match> results = new java.util.ArrayList<>();
+        for (ItemReport found : openFound) {
+            Match m = calculateAiMatch(queryLost, found);
+            m.setFoundTitle(found.getTitle());
+            m.setFoundCategory(found.getCategoryName());
+            m.setFoundColor(found.getColor());
+            m.setFoundLocation(found.getLocationName());
+            m.setFoundImage(found.getImagePath());
+            m.setFinderPhone(found.getContactPhone());
+            m.setFinderName(found.getUserName());
+            if (m.getTotalScore() >= 45.0) { // Return relevant candidates
+                results.add(m);
+            }
+        }
+        results.sort((a, b) -> Double.compare(b.getTotalScore(), a.getTotalScore()));
+        return results;
+    }
+
+    /**
      * Gets all high-confidence matches (score >= 85).
      */
     public List<Match> getHighConfidenceMatches() {

@@ -16,13 +16,16 @@ public class MatchDao {
 
     private static final String BASE_SELECT =
             "SELECT m.*, " +
-            "lr.title AS lost_title, lr.color AS lost_color, lc.name AS lost_category, " +
-            "fr.title AS found_title, fr.color AS found_color, fc.name AS found_category " +
+            "lr.title AS lost_title, lr.color AS lost_color, lr.image_path AS lost_image, lc.name AS lost_category, " +
+            "fr.title AS found_title, fr.color AS found_color, fr.image_path AS found_image, fc.name AS found_category, " +
+            "fl.name AS found_location, fu.full_name AS finder_name, fu.phone_number AS finder_phone " +
             "FROM matches m " +
             "LEFT JOIN item_reports lr ON m.lost_report_id = lr.id " +
             "LEFT JOIN categories lc ON lr.category_id = lc.id " +
             "LEFT JOIN item_reports fr ON m.found_report_id = fr.id " +
-            "LEFT JOIN categories fc ON fr.category_id = fc.id ";
+            "LEFT JOIN categories fc ON fr.category_id = fc.id " +
+            "LEFT JOIN campus_locations fl ON fr.location_id = fl.id " +
+            "LEFT JOIN users fu ON fr.user_id = fu.id ";
 
     public Optional<Match> findById(Long id) {
         String sql = BASE_SELECT + "WHERE m.id = ?";
@@ -88,6 +91,21 @@ public class MatchDao {
             }
         } catch (SQLException e) {
             log.error("Error finding matches for user: {}", userId, e);
+        }
+        return list;
+    }
+
+    public List<Match> findAll() {
+        List<Match> list = new ArrayList<>();
+        String sql = BASE_SELECT + "ORDER BY m.total_score DESC, m.created_at DESC";
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            log.error("Error finding all matches", e);
         }
         return list;
     }
@@ -205,9 +223,14 @@ public class MatchDao {
         try { m.setLostTitle(rs.getString("lost_title")); } catch (Exception ignore) {}
         try { m.setLostColor(rs.getString("lost_color")); } catch (Exception ignore) {}
         try { m.setLostCategory(rs.getString("lost_category")); } catch (Exception ignore) {}
+        try { m.setLostImage(rs.getString("lost_image")); } catch (Exception ignore) {}
         try { m.setFoundTitle(rs.getString("found_title")); } catch (Exception ignore) {}
         try { m.setFoundColor(rs.getString("found_color")); } catch (Exception ignore) {}
         try { m.setFoundCategory(rs.getString("found_category")); } catch (Exception ignore) {}
+        try { m.setFoundLocation(rs.getString("found_location")); } catch (Exception ignore) {}
+        try { m.setFoundImage(rs.getString("found_image")); } catch (Exception ignore) {}
+        try { m.setFinderName(rs.getString("finder_name")); } catch (Exception ignore) {}
+        try { m.setFinderPhone(rs.getString("finder_phone")); } catch (Exception ignore) {}
 
         return m;
     }
