@@ -35,6 +35,8 @@ target/
 Thumbs.db
 
 ### Application Specific ###
+config/
+*.key
 node_modules/
 package.json
 pnpm-lock.yaml

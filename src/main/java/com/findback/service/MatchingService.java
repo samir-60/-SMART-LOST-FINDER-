@@ -34,11 +34,13 @@ public class MatchingService {
     private final ReportDao reportDao;
     private final MatchDao matchDao;
     private final NotificationDao notificationDao;
+    private final GroqAiService groqAiService;
 
     public MatchingService() {
         this.reportDao = new ReportDao();
         this.matchDao = new MatchDao();
         this.notificationDao = new NotificationDao();
+        this.groqAiService = new GroqAiService();
     }
 
     /**
@@ -149,7 +151,7 @@ public class MatchingService {
         match.setDescriptionScore(descriptionScore);
         match.setTotalScore(totalScore);
 
-        // Build explanation
+        // Build explainable breakdown
         StringBuilder explanation = new StringBuilder();
         explanation.append(String.format("Category: %.1f/%.0f", categoryScore, CATEGORY_WEIGHT));
         explanation.append(categoryScore > 0 ? " (exact match)" : " (different)");
@@ -162,6 +164,27 @@ public class MatchingService {
         match.setExplanation(explanation.toString());
 
         return match;
+    }
+
+    /**
+     * Enhanced AI matching leveraging Groq real-time semantic analysis.
+     * Combines the deterministic 100-point campus rubric with deep LLM reasoning.
+     */
+    public Match calculateAiMatch(ItemReport lost, ItemReport found) {
+        Match baseline = calculateMatch(lost, found);
+        try {
+            GroqAiService.AiMatchAssessment aiAssessment = groqAiService.evaluateMatch(lost, found);
+            if (aiAssessment != null) {
+                baseline.setTotalScore(aiAssessment.totalScore);
+                if (aiAssessment.categoryScore > 0) baseline.setCategoryScore(aiAssessment.categoryScore);
+                if (aiAssessment.locationScore > 0) baseline.setLocationScore(aiAssessment.locationScore);
+                if (aiAssessment.dateScore > 0) baseline.setDateScore(aiAssessment.dateScore);
+                if (aiAssessment.colorScore > 0) baseline.setColorScore(aiAssessment.colorScore);
+                if (aiAssessment.descriptionScore > 0) baseline.setDescriptionScore(aiAssessment.descriptionScore);
+                baseline.setExplanation(aiAssessment.explanation);
+            }
+        } catch (Exception ignore) {}
+        return baseline;
     }
 
     /**
@@ -195,7 +218,7 @@ public class MatchingService {
                 if (matchDao.exists(lost.getId(), found.getId())) {
                     continue;
                 }
-                Match match = calculateMatch(lost, found);
+                Match match = calculateAiMatch(lost, found);
                 if (match.getTotalScore() >= MATCH_THRESHOLD) {
                     match.setStatus(MatchStatus.POTENTIAL);
                     matchDao.save(match);

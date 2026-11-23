@@ -98,6 +98,7 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         };
         itemTable = new JTable(tableModel);
         itemTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        itemTable.setAutoCreateRowSorter(true);
         itemTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -132,11 +133,14 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
 
     private void claimSelectedItem() {
         int selected = itemTable.getSelectedRow();
-        if (selected < 0 || currentResults == null || selected >= currentResults.size()) {
+        if (selected < 0 || currentResults == null) {
             JOptionPane.showMessageDialog(this, "Please select an item from the table to submit an ownership claim.", "Select Item", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        ItemReport r = currentResults.get(selected);
+        int modelRow = itemTable.convertRowIndexToModel(selected);
+        if (modelRow >= currentResults.size()) return;
+        ItemReport r = currentResults.get(modelRow);
+
         if (r.getReportType() != ReportType.FOUND) {
             JOptionPane.showMessageDialog(this, "Claims can only be filed against FOUND items held on campus.", "Notice", JOptionPane.INFORMATION_MESSAGE);
             return;
@@ -144,6 +148,11 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         User user = SessionManager.getInstance().getCurrentUser();
         if (user == null) {
             JOptionPane.showMessageDialog(this, "Please log in to submit a claim.", "Authentication Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (r.getUserId() != null && user.getId().equals(r.getUserId())) {
+            JOptionPane.showMessageDialog(this, "You reported finding this item yourself. You cannot claim your own found submission.", "Notice", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -211,11 +220,14 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
 
     private void showItemDetails() {
         int selected = itemTable.getSelectedRow();
-        if (selected < 0 || currentResults == null || selected >= currentResults.size()) {
+        if (selected < 0 || currentResults == null) {
             JOptionPane.showMessageDialog(this, "Please select an item from the table to view details.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        ItemReport r = currentResults.get(selected);
+        int modelRow = itemTable.convertRowIndexToModel(selected);
+        if (modelRow >= currentResults.size()) return;
+        ItemReport r = currentResults.get(modelRow);
+
         StringBuilder sb = new StringBuilder();
         sb.append("Report ID: #").append(r.getId()).append("\n");
         sb.append("Type: ").append(r.getReportType()).append("\n");
@@ -227,6 +239,7 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         sb.append("Date: ").append(r.getEventDate()).append("\n");
         sb.append("Status: ").append(r.getStatus()).append("\n");
         if (r.getCustodyStatus() != null) sb.append("Custody: ").append(r.getCustodyStatus()).append("\n");
+        if (r.getImagePath() != null) sb.append("Photo: Uploaded (").append(r.getImagePath()).append(")\n");
         sb.append("\nDescription:\n").append(r.getDescription());
 
         JOptionPane.showMessageDialog(this, sb.toString(), "Item Report Details", JOptionPane.INFORMATION_MESSAGE);

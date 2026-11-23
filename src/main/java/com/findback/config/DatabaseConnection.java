@@ -135,19 +135,32 @@ public class DatabaseConnection {
 
     public void checkAndInitializeSchema() {
         try (Connection conn = getConnection()) {
-            boolean allTablesExist = false;
+            boolean tablesExist = false;
             try (Statement stmt = conn.createStatement()) {
                 ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM item_reports");
                 if (rs.next()) {
-                    allTablesExist = true;
+                    tablesExist = true;
                 }
             } catch (SQLException ignore) {
-                allTablesExist = false;
+                tablesExist = false;
             }
 
-            if (!allTablesExist) {
+            if (!tablesExist) {
                 log.info("Ensuring database schema exists from database/schema.sql...");
                 executeSqlScript(conn, "database/schema.sql");
+            }
+
+            boolean needsSeed = false;
+            try (Statement stmt = conn.createStatement()) {
+                ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM users");
+                if (rs.next() && rs.getInt(1) == 0) {
+                    needsSeed = true;
+                }
+            } catch (SQLException ignore) {
+                needsSeed = true;
+            }
+
+            if (needsSeed) {
                 log.info("Populating initial demonstration seed data from database/seed.sql...");
                 executeSqlScript(conn, "database/seed.sql");
                 log.info("Database schema and seed data successfully initialized!");
@@ -161,11 +174,10 @@ public class DatabaseConnection {
         try {
             String content;
             File f = new File(relativePath);
-            InputStream in = null;
             if (f.exists()) {
                 content = Files.readString(Paths.get(relativePath));
             } else {
-                in = getClass().getClassLoader().getResourceAsStream(relativePath);
+                InputStream in = getClass().getClassLoader().getResourceAsStream(relativePath);
                 if (in == null && relativePath.startsWith("database/")) {
                     in = getClass().getClassLoader().getResourceAsStream(relativePath.substring(9));
                 }
@@ -173,13 +185,15 @@ public class DatabaseConnection {
                     log.warn("SQL script not found: {}", relativePath);
                     return;
                 }
-                BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line).append("\n");
+                try (InputStream stream = in;
+                     BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line).append("\n");
+                    }
+                    content = sb.toString();
                 }
-                content = sb.toString();
             }
 
             List<String> statements = splitSqlStatements(content);
@@ -189,7 +203,8 @@ public class DatabaseConnection {
                         try {
                             stmt.execute(statementToRun);
                         } catch (SQLException sqlEx) {
-                            if (!sqlEx.getMessage().toLowerCase().contains("already exists")) {
+                            String msg = sqlEx.getMessage().toLowerCase();
+                            if (!msg.contains("already exists") && !msg.contains("duplicate") && !msg.contains("unique index or primary key violation")) {
                                 log.warn("SQL execution notice on [{}]: {}", 
                                         statementToRun.substring(0, Math.min(60, statementToRun.length())), 
                                         sqlEx.getMessage());
