@@ -125,28 +125,19 @@ public class WelcomeFrame extends JFrame {
         content.add(iconsGrid);
         content.add(Box.createVerticalStrut(30));
 
-        // 8. Action Buttons
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
+        // 8. Action Buttons (Login & Register - Clear Glassy Premium Look)
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
         buttonsPanel.setOpaque(false);
         buttonsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton getStartedBtn = FindBackTheme.createStyledButton("Get Started", FindBackTheme.SECONDARY, Color.WHITE);
-        getStartedBtn.setPreferredSize(new Dimension(150, 46));
-        getStartedBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        getStartedBtn.addActionListener(e -> openRegisterDialog());
-
-        JButton loginBtn = FindBackTheme.createStyledButton("Login", new Color(255, 255, 255, 45), Color.WHITE);
-        loginBtn.setPreferredSize(new Dimension(130, 46));
-        loginBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JButton loginBtn = createGlassWelcomeButton("Login", true);
+        loginBtn.setPreferredSize(new Dimension(160, 46));
         loginBtn.addActionListener(e -> openLoginDialog());
 
-        JButton registerBtn = FindBackTheme.createOutlineButton("Register");
-        registerBtn.setForeground(Color.WHITE);
-        registerBtn.setPreferredSize(new Dimension(150, 46));
-        registerBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JButton registerBtn = createGlassWelcomeButton("Register", false);
+        registerBtn.setPreferredSize(new Dimension(160, 46));
         registerBtn.addActionListener(e -> openRegisterDialog());
 
-        buttonsPanel.add(getStartedBtn);
         buttonsPanel.add(loginBtn);
         buttonsPanel.add(registerBtn);
         content.add(buttonsPanel);
@@ -155,6 +146,85 @@ public class WelcomeFrame extends JFrame {
         gbc.anchor = GridBagConstraints.WEST;
         panel.add(content, gbc);
         return panel;
+    }
+
+    private JButton createGlassWelcomeButton(String text, boolean primary) {
+        JButton button = new JButton(text) {
+            private boolean hovered = false;
+            private boolean pressed = false;
+
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
+                    @Override public void mouseExited(MouseEvent e) { hovered = false; pressed = false; repaint(); }
+                    @Override public void mousePressed(MouseEvent e) { pressed = true; repaint(); }
+                    @Override public void mouseReleased(MouseEvent e) { pressed = false; repaint(); }
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+
+                int w = getWidth();
+                int h = getHeight();
+                int arc = 12;
+
+                if (primary) {
+                    // Vibrant Royal Blue Glass
+                    Color topC = pressed ? new Color(29, 78, 216, 240) : (hovered ? new Color(59, 130, 246, 230) : new Color(37, 99, 235, 200));
+                    Color botC = pressed ? new Color(30, 58, 138, 250) : (hovered ? new Color(37, 99, 235, 240) : new Color(29, 78, 216, 220));
+                    g2.setPaint(new GradientPaint(0, 0, topC, 0, h, botC));
+                    g2.fillRoundRect(0, 0, w, h, arc, arc);
+
+                    // Specular highlight
+                    g2.setPaint(new GradientPaint(0, 0, new Color(255, 255, 255, hovered ? 110 : 65), 0, h / 2.0f, new Color(255, 255, 255, 0)));
+                    g2.fillRoundRect(1, 1, w - 2, h / 2, arc, arc);
+
+                    // Luminous border
+                    g2.setColor(hovered ? new Color(255, 255, 255, 200) : new Color(147, 197, 253, 140));
+                    g2.setStroke(new BasicStroke(1.2f));
+                    g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
+                } else {
+                    // Frosted White Crystal Glass
+                    Color bg = pressed ? new Color(255, 255, 255, 45) : (hovered ? new Color(255, 255, 255, 35) : new Color(255, 255, 255, 18));
+                    g2.setColor(bg);
+                    g2.fillRoundRect(0, 0, w, h, arc, arc);
+
+                    // Specular highlight
+                    g2.setPaint(new GradientPaint(0, 0, new Color(255, 255, 255, hovered ? 70 : 35), 0, h / 2.0f, new Color(255, 255, 255, 0)));
+                    g2.fillRoundRect(1, 1, w - 2, h / 2, arc, arc);
+
+                    // Glass border
+                    g2.setColor(hovered ? new Color(147, 197, 253, 200) : new Color(255, 255, 255, 75));
+                    g2.setStroke(new BasicStroke(1.2f));
+                    g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
+                }
+
+                // Bold white, crystal clear text with drop shadow
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 15));
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (w - fm.stringWidth(getText())) / 2;
+                int y = (h + fm.getAscent() - fm.getDescent()) / 2 + (pressed ? 1 : 0);
+
+                // Subtle text shadow
+                g2.setColor(new Color(0, 0, 0, 100));
+                g2.drawString(getText(), x, y + 1);
+
+                g2.setColor(Color.WHITE);
+                g2.drawString(getText(), x, y);
+
+                g2.dispose();
+            }
+        };
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
     }
 
     private JPanel createUniversityBadge() {
