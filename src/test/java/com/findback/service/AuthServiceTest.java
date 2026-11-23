@@ -40,8 +40,7 @@ class AuthServiceTest {
                 rawPassword,
                 "STD-" + ts,
                 "Computer Science",
-                "01711999999"
-        );
+                "01711999999");
 
         assertNotNull(registered);
         assertNotNull(registered.getId(), "User ID must not be null after registration");
@@ -107,8 +106,7 @@ class AuthServiceTest {
                 "Black",
                 "Desk 12",
                 LocalDate.now(),
-                null
-        );
+                null);
 
         assertNotNull(report, "Created report should not be null");
         assertNotNull(report.getId(), "Created report ID should not be null");

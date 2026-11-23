@@ -1,5 +1,8 @@
 package com.findback.ui;
 
+import com.findback.service.HandoverService;
+import com.findback.service.MatchingService;
+import com.findback.service.ReportService;
 import com.findback.ui.components.RoundedPanel;
 
 import javax.imageio.ImageIO;
@@ -468,15 +471,27 @@ public class WelcomeFrame extends JFrame {
 
         card.add(Box.createVerticalStrut(26));
 
-        // University Campus Stats Row
+        // University Campus Live Real Stats Row (Real-time queries from database)
         JPanel statsPanel = new JPanel(new GridLayout(1, 3, 12, 0));
         statsPanel.setOpaque(false);
         statsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         statsPanel.setMaximumSize(new Dimension(420, 75));
 
-        statsPanel.add(createStatMiniBox("500+", "Items Found"));
-        statsPanel.add(createStatMiniBox("88%", "Match Rate"));
-        statsPanel.add(createStatMiniBox("<24h", "Avg Return"));
+        long foundCount = 0;
+        int matchCount = 0;
+        long recoveredCount = 0;
+        try {
+            ReportService reportService = new ReportService();
+            HandoverService handoverService = new HandoverService();
+            MatchingService matchingService = new MatchingService();
+            foundCount = reportService.countFound();
+            matchCount = matchingService.getHighConfidenceMatches().size();
+            recoveredCount = handoverService.countRecovered();
+        } catch (Exception ignore) {}
+
+        statsPanel.add(createStatMiniBox(String.valueOf(foundCount), "Items Found"));
+        statsPanel.add(createStatMiniBox(String.valueOf(matchCount), "Smart Matches"));
+        statsPanel.add(createStatMiniBox(String.valueOf(recoveredCount), "Recovered"));
 
         card.add(statsPanel);
 
