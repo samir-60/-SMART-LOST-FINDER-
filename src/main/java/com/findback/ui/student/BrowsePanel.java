@@ -15,12 +15,21 @@ import com.findback.ui.FindBackTheme;
 import com.findback.ui.MainFrame;
 import com.findback.ui.components.RoundedPanel;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.net.URI;
 import java.util.List;
 
+/**
+ * Browse and search campus lost and found items.
+ * Clean, human-written Java Swing interface with search filters, WhatsApp contact, and delete actions.
+ */
 public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
     private final ReportService reportService = new ReportService();
     private final ClaimService claimService = new ClaimService();
@@ -29,8 +38,8 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
 
     private JTextField searchField;
     private JComboBox<String> typeCombo;
-    private JComboBox<LostReportPanel.CategoryItem> categoryCombo;
-    private JComboBox<LostReportPanel.LocationItem> locationCombo;
+    private JComboBox<FilterItem> categoryCombo;
+    private JComboBox<FilterItem> locationCombo;
     private JTextField colorFilterField;
 
     private DefaultTableModel tableModel;
@@ -93,8 +102,12 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         add(topPanel, BorderLayout.NORTH);
 
         // Results Table
-        tableModel = new DefaultTableModel(new String[]{"ID", "Type", "Title", "Category", "Location", "Color", "Date", "Status"}, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
+        tableModel = new DefaultTableModel(
+                new String[]{"ID", "Type", "Title", "Category", "Location", "Color", "Date", "Status"}, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
         itemTable = new JTable(tableModel);
         itemTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -116,6 +129,7 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         // Bottom Action Bar
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 10));
         bottomBar.setOpaque(false);
+
         JButton viewBtn = FindBackTheme.createStyledButton("View Item Details", FindBackTheme.CARD, FindBackTheme.PRIMARY);
         viewBtn.setBorder(BorderFactory.createLineBorder(FindBackTheme.BORDER));
         viewBtn.addActionListener(e -> showItemDetails());
@@ -174,44 +188,15 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
     private void claimSelectedItem() {
         int selected = itemTable.getSelectedRow();
         if (selected < 0 || currentResults == null) {
-            JOptionPane.showMessageDialog(this, "Please select an item from the table to submit an ownership claim.", "Select Item", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select an item from the table to submit an ownership claim.",
+                    "Select Item", JOptionPane.WARNING_MESSAGE);
             return;
         }
         int modelRow = itemTable.convertRowIndexToModel(selected);
         if (modelRow >= currentResults.size()) return;
         ItemReport r = currentResults.get(modelRow);
 
-        if (r.getReportType() != ReportType.FOUND) {
-            JOptionPane.showMessageDialog(this, "Claims can only be filed against FOUND items held on campus.", "Notice", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        User user = SessionManager.getInstance().getCurrentUser();
-        if (user == null) {
-            JOptionPane.showMessageDialog(this, "Please log in to submit a claim.", "Authentication Required", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        if (r.getUserId() != null && user.getId().equals(r.getUserId())) {
-            JOptionPane.showMessageDialog(this, "You reported finding this item yourself. You cannot claim your own found submission.", "Notice", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        String proof = JOptionPane.showInputDialog(this,
-                "Enter confidential proof of ownership for '" + r.getTitle() + "':\n" +
-                "(e.g. Serial number, distinctive marks, passcode/lock, or detailed inside contents)",
-                "Submit Ownership Claim", JOptionPane.QUESTION_MESSAGE);
-
-        if (proof != null && !proof.trim().isEmpty()) {
-            try {
-                Claim claim = claimService.submitClaim(user.getId(), null, r.getId(), null, proof.trim(), null);
-                JOptionPane.showMessageDialog(this,
-                        "Ownership Claim #" + claim.getId() + " submitted successfully!\n" +
-                        "Campus authorities will review your evidence. You can track progress under the Claims tab.",
-                        "Claim Submitted", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error submitting claim: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
+        submitClaimDirectly(r);
     }
 
     private void applySearch() {
@@ -221,10 +206,10 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         if (typeIdx == 1) type = ReportType.LOST;
         else if (typeIdx == 2) type = ReportType.FOUND;
 
-        LostReportPanel.CategoryItem cat = (LostReportPanel.CategoryItem) categoryCombo.getSelectedItem();
+        FilterItem cat = (FilterItem) categoryCombo.getSelectedItem();
         Long catId = (cat != null && cat.id > 0) ? cat.id : null;
 
-        LostReportPanel.LocationItem loc = (LostReportPanel.LocationItem) locationCombo.getSelectedItem();
+        FilterItem loc = (FilterItem) locationCombo.getSelectedItem();
         Long locId = (loc != null && loc.id > 0) ? loc.id : null;
 
         String color = colorFilterField.getText().trim();
@@ -244,6 +229,7 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
 
     private void populateTable(List<ItemReport> items) {
         tableModel.setRowCount(0);
+        if (items == null) return;
         for (ItemReport r : items) {
             tableModel.addRow(new Object[]{
                     r.getId(),
@@ -268,53 +254,159 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         if (modelRow >= currentResults.size()) return;
         ItemReport r = currentResults.get(modelRow);
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("Report ID: #").append(r.getId()).append("\n");
-        sb.append("Type: ").append(r.getReportType()).append("\n");
-        sb.append("Title: ").append(r.getTitle()).append("\n");
-        sb.append("Category: ").append(r.getCategoryName()).append("\n");
-        sb.append("Location: ").append(r.getLocationName()).append("\n");
-        if (r.getSpecificLocation() != null) sb.append("Specific: ").append(r.getSpecificLocation()).append("\n");
-        sb.append("Color: ").append(r.getColor()).append("\n");
-        sb.append("Date: ").append(r.getEventDate()).append("\n");
-        sb.append("Status: ").append(r.getStatus()).append("\n");
-        if (r.getCustodyStatus() != null) sb.append("Custody: ").append(r.getCustodyStatus()).append("\n");
-        if (r.getImagePath() != null) sb.append("Photo: Uploaded (").append(r.getImagePath()).append(")\n");
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        boolean isOwnerOrAdmin = currentUser != null && (currentUser.isStaffOrAdmin() || currentUser.getId().equals(r.getUserId()));
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Item Report #" + r.getId() + " Details", true);
+        dialog.setSize(520, 560);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(16, 16));
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(new EmptyBorder(20, 24, 20, 24));
+        content.setBackground(Color.WHITE);
+
+        // Header Title
+        JLabel titleLbl = new JLabel(r.getTitle() != null ? r.getTitle() : "Item Details");
+        titleLbl.setFont(FindBackTheme.getHeaderFont(20));
+        titleLbl.setForeground(FindBackTheme.TEXT);
+        content.add(titleLbl);
+        content.add(Box.createVerticalStrut(12));
+
+        // Optional Photo Preview
+        if (r.getImagePath() != null && !r.getImagePath().trim().isEmpty()) {
+            File imgFile = new File(r.getImagePath());
+            if (imgFile.exists()) {
+                try {
+                    BufferedImage bimg = ImageIO.read(imgFile);
+                    if (bimg != null) {
+                        Image scaled = bimg.getScaledInstance(220, 140, Image.SCALE_SMOOTH);
+                        JLabel imgLbl = new JLabel(new ImageIcon(scaled));
+                        imgLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+                        imgLbl.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1, true));
+                        content.add(imgLbl);
+                        content.add(Box.createVerticalStrut(12));
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // Details Grid
+        JPanel infoGrid = new JPanel(new GridLayout(0, 2, 8, 8));
+        infoGrid.setOpaque(false);
+        infoGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        addDetailRow(infoGrid, "Report Type:", r.getReportType() != null ? r.getReportType().name() : "LOST");
+        addDetailRow(infoGrid, "Category:", r.getCategoryName() != null ? r.getCategoryName() : "General");
+        addDetailRow(infoGrid, "Location:", r.getLocationName() != null ? r.getLocationName() : "Campus");
+        if (r.getSpecificLocation() != null && !r.getSpecificLocation().isEmpty()) {
+            addDetailRow(infoGrid, "Specific Spot:", r.getSpecificLocation());
+        }
+        addDetailRow(infoGrid, "Color:", r.getColor() != null ? r.getColor() : "-");
+        addDetailRow(infoGrid, "Event Date:", r.getEventDate() != null ? r.getEventDate().toString() : "-");
+        addDetailRow(infoGrid, "Status:", r.getStatus() != null ? r.getStatus().name() : "OPEN");
+        if (r.getCustodyStatus() != null) {
+            addDetailRow(infoGrid, "Custody:", r.getCustodyStatus().name());
+        }
+
         String contact = r.getContactPhone();
-        if (contact != null && !contact.isEmpty()) {
-            sb.append("Reporter / WhatsApp: ").append(contact).append("\n");
-        }
-        sb.append("\nDescription:\n").append(r.getDescription());
-
-        Object[] options;
-        if (contact != null && !contact.isEmpty()) {
-            options = new Object[]{"Chat on WhatsApp", "Submit Claim", "Close"};
-        } else {
-            options = new Object[]{"Submit Claim", "Close"};
+        if (contact != null && !contact.trim().isEmpty()) {
+            addDetailRow(infoGrid, "Contact / WhatsApp:", contact);
         }
 
-        int choice = JOptionPane.showOptionDialog(this, sb.toString(), "Item Report Details",
-                JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+        content.add(infoGrid);
+        content.add(Box.createVerticalStrut(14));
 
-        if (choice == 0 && contact != null && !contact.isEmpty()) {
-            openWhatsAppChat(contact);
-        } else if ((choice == 1 && contact != null && !contact.isEmpty()) || (choice == 0 && (contact == null || contact.isEmpty()))) {
-            submitClaimDirectly(r);
+        // Description Box
+        JLabel descHeader = new JLabel("Description & Marks:");
+        descHeader.setFont(FindBackTheme.getHeaderFont(13));
+        descHeader.setForeground(FindBackTheme.TEXT);
+        content.add(descHeader);
+        content.add(Box.createVerticalStrut(4));
+
+        JTextArea descArea = new JTextArea(r.getDescription() != null ? r.getDescription() : "No details provided.");
+        descArea.setWrapStyleWord(true);
+        descArea.setLineWrap(true);
+        descArea.setEditable(false);
+        descArea.setBackground(new Color(248, 250, 252));
+        descArea.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(226, 232, 240)),
+                new EmptyBorder(8, 8, 8, 8)
+        ));
+        content.add(new JScrollPane(descArea));
+
+        dialog.add(content, BorderLayout.CENTER);
+
+        // Buttons Bar
+        JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
+        btnBar.setBackground(FindBackTheme.BG);
+
+        if (contact != null && !contact.trim().isEmpty()) {
+            JButton waBtn = FindBackTheme.createStyledButton("Chat on WhatsApp", new Color(37, 211, 102), Color.WHITE);
+            waBtn.addActionListener(e -> openWhatsAppChat(contact));
+            btnBar.add(waBtn);
         }
+
+        if (r.isFound() && (currentUser == null || !currentUser.getId().equals(r.getUserId()))) {
+            JButton claimBtn = FindBackTheme.createPrimaryButton("Submit Claim");
+            claimBtn.addActionListener(e -> {
+                dialog.dispose();
+                submitClaimDirectly(r);
+            });
+            btnBar.add(claimBtn);
+        }
+
+        if (isOwnerOrAdmin) {
+            JButton deleteBtn = FindBackTheme.createDangerButton("Delete Report");
+            deleteBtn.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(dialog,
+                        "Are you sure you want to permanently delete '" + r.getTitle() + "'?",
+                        "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    reportService.deleteReport(r.getId());
+                    dialog.dispose();
+                    refresh();
+                    JOptionPane.showMessageDialog(BrowsePanel.this, "Report deleted successfully.", "Deleted", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+            btnBar.add(deleteBtn);
+        }
+
+        JButton closeBtn = FindBackTheme.createStyledButton("Close", Color.WHITE, FindBackTheme.TEXT);
+        closeBtn.setBorder(BorderFactory.createLineBorder(FindBackTheme.BORDER));
+        closeBtn.addActionListener(e -> dialog.dispose());
+        btnBar.add(closeBtn);
+
+        dialog.add(btnBar, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    }
+
+    private void addDetailRow(JPanel panel, String label, String value) {
+        JLabel l = new JLabel(label);
+        l.setFont(FindBackTheme.getHeaderFont(12));
+        l.setForeground(new Color(100, 115, 130));
+
+        JLabel v = new JLabel(value);
+        v.setFont(FindBackTheme.getBodyFont(12));
+        v.setForeground(FindBackTheme.TEXT);
+
+        panel.add(l);
+        panel.add(v);
     }
 
     private void openWhatsAppChat(String phone) {
         try {
             String cleanNumber = phone.replaceAll("[^0-9]", "");
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                Desktop.getDesktop().browse(new java.net.URI("https://wa.me/" + cleanNumber));
+                Desktop.getDesktop().browse(new URI("https://wa.me/" + cleanNumber));
             } else {
-                java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(phone);
+                StringSelection sel = new StringSelection(phone);
                 Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
                 JOptionPane.showMessageDialog(this, "WhatsApp number copied to clipboard: " + phone, "WhatsApp Contact", JOptionPane.INFORMATION_MESSAGE);
             }
         } catch (Exception ex) {
-            java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(phone);
+            StringSelection sel = new StringSelection(phone);
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
             JOptionPane.showMessageDialog(this, "WhatsApp number copied to clipboard: " + phone, "WhatsApp Contact", JOptionPane.INFORMATION_MESSAGE);
         }
@@ -326,14 +418,25 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
             return;
         }
         User user = SessionManager.getInstance().getCurrentUser();
-        if (user == null) return;
+        if (user == null) {
+            JOptionPane.showMessageDialog(this, "Please log in to submit an ownership claim.", "Authentication Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (r.getUserId() != null && user.getId().equals(r.getUserId())) {
+            JOptionPane.showMessageDialog(this, "You reported finding this item yourself. You cannot claim your own found submission.", "Notice", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
         String proof = JOptionPane.showInputDialog(this,
                 "Enter confidential ownership evidence for '" + r.getTitle() + "':\n(e.g. Serial number, specific engravings, markings, or inside contents)",
                 "Claim Found Belonging", JOptionPane.QUESTION_MESSAGE);
+
         if (proof != null && !proof.trim().isEmpty()) {
             try {
-                claimService.submitClaim(user.getId(), r.getId(), r.getId(), null, proof.trim(), null);
-                JOptionPane.showMessageDialog(this, "Ownership claim registered successfully! Campus staff and the finder will verify.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                Claim claim = claimService.submitClaim(user.getId(), null, r.getId(), null, proof.trim(), null);
+                JOptionPane.showMessageDialog(this,
+                        "Ownership claim #" + claim.getId() + " submitted successfully!\nCampus staff and the finder will verify.",
+                        "Claim Submitted", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Claim error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -343,17 +446,32 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
     @Override
     public void refresh() {
         categoryCombo.removeAllItems();
-        categoryCombo.addItem(new LostReportPanel.CategoryItem(0L, "All Categories"));
+        categoryCombo.addItem(new FilterItem(0L, "All Categories"));
         for (Category c : categoryDao.findAllActive()) {
-            categoryCombo.addItem(new LostReportPanel.CategoryItem(c.getId(), c.getName()));
+            categoryCombo.addItem(new FilterItem(c.getId(), c.getName()));
         }
 
         locationCombo.removeAllItems();
-        locationCombo.addItem(new LostReportPanel.LocationItem(0L, "All Locations"));
+        locationCombo.addItem(new FilterItem(0L, "All Locations"));
         for (CampusLocation l : locationDao.findAllActive()) {
-            locationCombo.addItem(new LostReportPanel.LocationItem(l.getId(), l.getName()));
+            locationCombo.addItem(new FilterItem(l.getId(), l.getName()));
         }
 
         applySearch();
+    }
+
+    public static class FilterItem {
+        public final Long id;
+        public final String name;
+
+        public FilterItem(Long id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 }
