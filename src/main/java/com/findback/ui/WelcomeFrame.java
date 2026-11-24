@@ -102,7 +102,7 @@ public class WelcomeFrame extends JFrame {
         content.add(badge);
         content.add(Box.createVerticalStrut(14));
 
-        // 2. Clear University Header
+        // 2. University Header
         JLabel uniHeader = new JLabel("WELCOME TO METROPOLITAN UNIVERSITY");
         uniHeader.setFont(FindBackTheme.getHeaderFont(22));
         uniHeader.setForeground(new Color(224, 242, 254));
@@ -125,7 +125,15 @@ public class WelcomeFrame extends JFrame {
         content.add(subtitle);
         content.add(Box.createVerticalStrut(12));
 
-        // 5. Supporting Description
+        // 5. Hero Accent Line
+        JLabel hero = new JLabel("Lost something? Find it back.");
+        hero.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        hero.setForeground(new Color(254, 240, 138));
+        hero.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(hero);
+        content.add(Box.createVerticalStrut(8));
+
+        // 6. Supporting Description
         JLabel desc = new JLabel("<html><div style='width:460px; color:#dbeafe; font-size:13px; line-height:1.45;'>"
                 + "Official intelligent recovery portal for Metropolitan University students and faculty. "
                 + "Report lost items, discover found belongings, and let our explainable Smart Matching "
@@ -134,21 +142,25 @@ public class WelcomeFrame extends JFrame {
         content.add(desc);
         content.add(Box.createVerticalStrut(22));
 
-        // 6. Belonging Category Pills (Clean text chips without emojis)
+        // 7. Belonging Category Pills (Clean text chips without emojis)
         JPanel categoryGrid = createCategoryGrid();
         categoryGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(categoryGrid);
         content.add(Box.createVerticalStrut(26));
 
-        // 7. Action Buttons (Login & Register)
+        // 8. Action Buttons (Login & Register - Glassy styled buttons)
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
         buttonsPanel.setOpaque(false);
         buttonsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton loginBtn = createWelcomeButton("Login", true);
+        JButton loginBtn = FindBackTheme.createStyledButton("Login", FindBackTheme.SECONDARY, Color.WHITE);
+        loginBtn.setPreferredSize(new Dimension(160, 44));
+        loginBtn.setFont(FindBackTheme.getHeaderFont(15));
         loginBtn.addActionListener(e -> openLoginDialog());
 
-        JButton registerBtn = createWelcomeButton("Register", false);
+        JButton registerBtn = FindBackTheme.createStyledButton("Register", new Color(255, 255, 255, 40), Color.WHITE);
+        registerBtn.setPreferredSize(new Dimension(160, 44));
+        registerBtn.setFont(FindBackTheme.getHeaderFont(15));
         registerBtn.addActionListener(e -> openRegisterDialog());
 
         buttonsPanel.add(loginBtn);
@@ -185,10 +197,10 @@ public class WelcomeFrame extends JFrame {
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    Color bg = hovered ? new Color(255, 255, 255, 45) : new Color(255, 255, 255, 20);
+                    Color bg = hovered ? new Color(255, 255, 255, 50) : new Color(255, 255, 255, 22);
                     g2.setColor(bg);
                     g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
-                    g2.setColor(hovered ? new Color(147, 197, 253, 200) : new Color(255, 255, 255, 40));
+                    g2.setColor(hovered ? new Color(147, 197, 253, 200) : new Color(255, 255, 255, 45));
                     g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, getWidth() - 1, getHeight() - 1, 10, 10));
                     g2.dispose();
                     super.paintComponent(g);
@@ -206,24 +218,6 @@ public class WelcomeFrame extends JFrame {
             grid.add(cell);
         }
         return grid;
-    }
-
-    private JButton createWelcomeButton(String text, boolean primary) {
-        JButton button = new JButton(text);
-        button.setFont(FindBackTheme.getHeaderFont(15));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setPreferredSize(new Dimension(160, 44));
-        if (primary) {
-            button.setBackground(FindBackTheme.SECONDARY);
-            button.setForeground(Color.WHITE);
-        } else {
-            button.setBackground(new Color(255, 255, 255, 30));
-            button.setForeground(Color.WHITE);
-            button.setBorder(BorderFactory.createLineBorder(new Color(255, 255, 255, 90), 1, true));
-        }
-        button.putClientProperty("JButton.buttonType", "roundRect");
-        return button;
     }
 
     private JPanel createRightPanel() {
@@ -286,10 +280,22 @@ public class WelcomeFrame extends JFrame {
         JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setOpaque(false);
 
-        JLabel numBadge = new JLabel(stepNum, SwingConstants.CENTER);
+        JLabel numBadge = new JLabel(stepNum, SwingConstants.CENTER) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(239, 246, 255));
+                g2.fillOval(0, 0, getWidth() - 1, getHeight() - 1);
+                g2.setColor(new Color(37, 99, 235));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawOval(0, 0, getWidth() - 1, getHeight() - 1);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
         numBadge.setFont(FindBackTheme.getHeaderFont(12));
         numBadge.setForeground(FindBackTheme.SECONDARY);
-        numBadge.setBorder(BorderFactory.createLineBorder(FindBackTheme.SECONDARY, 1, true));
         numBadge.setPreferredSize(new Dimension(28, 28));
         row.add(numBadge, BorderLayout.WEST);
 
@@ -366,6 +372,10 @@ public class WelcomeFrame extends JFrame {
             int w = getWidth();
             int h = getHeight();
 
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
             if (campusImage != null) {
                 double imgAspect = (double) campusImage.getWidth() / campusImage.getHeight();
                 double panelAspect = (double) w / h;
@@ -381,15 +391,24 @@ public class WelcomeFrame extends JFrame {
                     drawX = (w - drawW) / 2;
                     drawY = 0;
                 }
-                g.drawImage(campusImage, drawX, drawY, drawW, drawH, null);
+                g2.drawImage(campusImage, drawX, drawY, drawW, drawH, null);
             } else {
-                g.setColor(FindBackTheme.PRIMARY);
-                g.fillRect(0, 0, w, h);
+                g2.setColor(FindBackTheme.PRIMARY);
+                g2.fillRect(0, 0, w, h);
             }
 
-            // Dark overlay for readability
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setPaint(new GradientPaint(0, 0, new Color(10, 25, 47, 235), w, 0, new Color(10, 20, 38, 200)));
+            // Atmospheric gradient overlay: deep navy on the left for text contrast, translucent on the right
+            LinearGradientPaint overlay = new LinearGradientPaint(
+                    0, 0, w, 0,
+                    new float[]{0.0f, 0.55f, 0.85f, 1.0f},
+                    new Color[]{
+                            new Color(10, 25, 47, 235), // Deep navy on left
+                            new Color(15, 35, 65, 210),
+                            new Color(10, 25, 47, 160),
+                            new Color(10, 20, 38, 190)  // Translucent on right
+                    }
+            );
+            g2.setPaint(overlay);
             g2.fillRect(0, 0, w, h);
             g2.dispose();
         }
