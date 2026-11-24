@@ -343,9 +343,9 @@ public class WelcomeFrame extends JFrame {
                     MatchingService ms = new MatchingService();
                     HandoverService hs = new HandoverService();
                     return new long[]{
-                            rs.countFoundReports(),
+                            rs.countFound(),
                             ms.getAllMatches().size(),
-                            hs.countCompleted()
+                            hs.countRecovered()
                     };
                 } catch (Exception e) {
                     return new long[]{0, 0, 0};
