@@ -35,6 +35,12 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
     private DefaultTableModel recentFoundModel;
     private DefaultTableModel matchesModel;
 
+    private JTable lostTable;
+    private JTable foundTable;
+
+    private List<ItemReport> currentLostItems;
+    private List<ItemReport> currentFoundItems;
+
     public DashboardPanel() {
         setLayout(new BorderLayout(20, 20));
         setBackground(FindBackTheme.BG);
@@ -84,7 +90,7 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
         // Two-column section: Recent Lost & Recent Found
         JPanel tablesRow = new JPanel(new GridLayout(1, 2, 20, 0));
         tablesRow.setOpaque(false);
-        tablesRow.setPreferredSize(new Dimension(0, 320));
+        tablesRow.setPreferredSize(new Dimension(0, 340));
 
         // Recent Lost Panel
         RoundedPanel lostPanel = new RoundedPanel(12, FindBackTheme.CARD);
@@ -98,8 +104,18 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
         recentLostModel = new DefaultTableModel(new String[]{"Item Title", "Category", "Location", "Date", "Status"}, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
-        JTable lostTable = new JTable(recentLostModel);
+        lostTable = new JTable(recentLostModel);
+        lostTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         lostPanel.add(new JScrollPane(lostTable), BorderLayout.CENTER);
+
+        JPanel lostActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        lostActions.setOpaque(false);
+        JButton deleteLostBtn = FindBackTheme.createDangerButton("Delete Report");
+        deleteLostBtn.setPreferredSize(new Dimension(130, 32));
+        deleteLostBtn.addActionListener(e -> deleteSelectedReport(true));
+        lostActions.add(deleteLostBtn);
+        lostPanel.add(lostActions, BorderLayout.SOUTH);
+
         tablesRow.add(lostPanel);
 
         // Recent Found Panel
@@ -114,8 +130,18 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
         recentFoundModel = new DefaultTableModel(new String[]{"Item Title", "Category", "Location", "Date", "Custody"}, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
-        JTable foundTable = new JTable(recentFoundModel);
+        foundTable = new JTable(recentFoundModel);
+        foundTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         foundPanel.add(new JScrollPane(foundTable), BorderLayout.CENTER);
+
+        JPanel foundActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        foundActions.setOpaque(false);
+        JButton deleteFoundBtn = FindBackTheme.createDangerButton("Delete Report");
+        deleteFoundBtn.setPreferredSize(new Dimension(130, 32));
+        deleteFoundBtn.addActionListener(e -> deleteSelectedReport(false));
+        foundActions.add(deleteFoundBtn);
+        foundPanel.add(foundActions, BorderLayout.SOUTH);
+
         tablesRow.add(foundPanel);
 
         contentPanel.add(tablesRow);
@@ -149,6 +175,39 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
         refresh();
     }
 
+    private void deleteSelectedReport(boolean isLost) {
+        JTable table = isLost ? lostTable : foundTable;
+        List<ItemReport> items = isLost ? currentLostItems : currentFoundItems;
+        int row = table.getSelectedRow();
+        if (row < 0 || items == null || row >= items.size()) {
+            JOptionPane.showMessageDialog(this, "Please select a report to delete.", "Select Report", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        ItemReport report = items.get(row);
+        User user = SessionManager.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        if (!user.isStaffOrAdmin() && !user.getId().equals(report.getUserId())) {
+            JOptionPane.showMessageDialog(this, "You can only delete reports that you reported.", "Permission Denied", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to permanently delete report: '" + report.getTitle() + "'?",
+                "Confirm Delete Report", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean deleted = reportService.deleteReport(report.getId());
+            if (deleted) {
+                refresh();
+                JOptionPane.showMessageDialog(this, "Report deleted successfully.", "Deleted", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to delete report.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     @Override
     public void refresh() {
         lostCard.setValue(String.valueOf(reportService.countLost()));
@@ -162,8 +221,8 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
 
         // Populate Lost Table
         recentLostModel.setRowCount(0);
-        List<ItemReport> lostItems = reportService.getRecentLost(10);
-        for (ItemReport r : lostItems) {
+        currentLostItems = reportService.getRecentLost(10);
+        for (ItemReport r : currentLostItems) {
             recentLostModel.addRow(new Object[]{
                     r.getTitle(),
                     r.getCategoryName() != null ? r.getCategoryName() : "General",
@@ -175,8 +234,8 @@ public class DashboardPanel extends JPanel implements MainFrame.Refreshable {
 
         // Populate Found Table
         recentFoundModel.setRowCount(0);
-        List<ItemReport> foundItems = reportService.getRecentFound(10);
-        for (ItemReport r : foundItems) {
+        currentFoundItems = reportService.getRecentFound(10);
+        for (ItemReport r : currentFoundItems) {
             recentFoundModel.addRow(new Object[]{
                     r.getTitle(),
                     r.getCategoryName() != null ? r.getCategoryName() : "General",

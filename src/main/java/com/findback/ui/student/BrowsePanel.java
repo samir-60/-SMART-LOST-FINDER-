@@ -125,10 +125,50 @@ public class BrowsePanel extends JPanel implements MainFrame.Refreshable {
         claimBtn.addActionListener(e -> claimSelectedItem());
         bottomBar.add(claimBtn);
 
+        JButton deleteBtn = FindBackTheme.createDangerButton("Delete Report");
+        deleteBtn.addActionListener(e -> deleteSelectedItem());
+        bottomBar.add(deleteBtn);
+
         tableCard.add(bottomBar, BorderLayout.SOUTH);
         add(tableCard, BorderLayout.CENTER);
 
         refresh();
+    }
+
+    private void deleteSelectedItem() {
+        int selected = itemTable.getSelectedRow();
+        if (selected < 0 || currentResults == null) {
+            JOptionPane.showMessageDialog(this, "Please select an item from the table to delete.", "Select Item", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int modelRow = itemTable.convertRowIndexToModel(selected);
+        if (modelRow >= currentResults.size()) return;
+        ItemReport r = currentResults.get(modelRow);
+
+        User user = SessionManager.getInstance().getCurrentUser();
+        if (user == null) {
+            JOptionPane.showMessageDialog(this, "Please log in to manage reports.", "Authentication Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (!user.isStaffOrAdmin() && !user.getId().equals(r.getUserId())) {
+            JOptionPane.showMessageDialog(this, "You can only delete your own reports.", "Permission Denied", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to permanently delete '" + r.getTitle() + "'?",
+                "Confirm Delete Report", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean deleted = reportService.deleteReport(r.getId());
+            if (deleted) {
+                refresh();
+                JOptionPane.showMessageDialog(this, "Report deleted successfully.", "Deleted", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to delete report.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private void claimSelectedItem() {

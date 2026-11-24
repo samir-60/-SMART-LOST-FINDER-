@@ -165,6 +165,11 @@ public class DatabaseConnection {
                 executeSqlScript(conn, "database/seed.sql");
                 log.info("Database schema and seed data successfully initialized!");
             }
+
+            // Clean up any test dummy reports from previous test executions
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("DELETE FROM item_reports WHERE title LIKE '%Test Laptop%' OR title LIKE '%Test Student%' OR title LIKE 'Test %'");
+            } catch (Exception ignore) {}
         } catch (Exception e) {
             log.error("Error checking or initializing database schema: {}", e.getMessage(), e);
         }

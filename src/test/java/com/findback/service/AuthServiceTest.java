@@ -87,13 +87,6 @@ class AuthServiceTest {
     @Test
     @DisplayName("Create lost report and trigger matching with Groq AI engine")
     void testCreateLostReportAndMatch() {
-        try (java.sql.Connection conn = com.findback.config.DatabaseConnection.getInstance().getConnection()) {
-            com.findback.config.DatabaseConnection.getInstance().executeSqlScript(conn, "database/schema.sql");
-            com.findback.config.DatabaseConnection.getInstance().executeSqlScript(conn, "database/seed.sql");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
         ReportService reportService = new ReportService();
         MatchingService matchingService = new MatchingService();
 
@@ -108,10 +101,15 @@ class AuthServiceTest {
                 LocalDate.now(),
                 null);
 
-        assertNotNull(report, "Created report should not be null");
-        assertNotNull(report.getId(), "Created report ID should not be null");
-
-        assertDoesNotThrow(() -> matchingService.processReportMatches(report.getId()));
+        try {
+            assertNotNull(report, "Created report should not be null");
+            assertNotNull(report.getId(), "Created report ID should not be null");
+            assertDoesNotThrow(() -> matchingService.processReportMatches(report.getId()));
+        } finally {
+            if (report != null && report.getId() != null) {
+                reportService.deleteReport(report.getId());
+            }
+        }
     }
 
     @Test
