@@ -14,11 +14,13 @@ import com.findback.util.DateComparisonUtil;
 import com.findback.util.TextSimilarityUtil;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Core matching engine — compares lost and found reports using weighted scoring
- * across category, location, date, color, and description similarity.
+ * across category (25%), location (25%), date (20%), color (15%), and description (15%).
  */
 public class MatchingService {
 
@@ -31,47 +33,29 @@ public class MatchingService {
     private static final double MATCH_THRESHOLD = 70.0;
     private static final double HIGH_CONFIDENCE_THRESHOLD = 85.0;
 
-    private final ReportDao reportDao;
-    private final MatchDao matchDao;
-    private final NotificationDao notificationDao;
-    private final GroqAiService groqAiService;
-
-    public MatchingService() {
-        this.reportDao = new ReportDao();
-        this.matchDao = new MatchDao();
-        this.notificationDao = new NotificationDao();
-        this.groqAiService = new GroqAiService();
-    }
+    private final ReportDao reportDao = new ReportDao();
+    private final MatchDao matchDao = new MatchDao();
+    private final NotificationDao notificationDao = new NotificationDao();
+    private final GroqAiService groqAiService = new GroqAiService();
 
     /**
      * Processes potential matches for a newly created or updated report.
-     * If the report is LOST, it is compared against all OPEN FOUND reports.
-     * If the report is FOUND, it is compared against all OPEN LOST reports.
      */
     public void processReportMatches(Long reportId) {
         ItemReport report = reportDao.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found with ID: " + reportId));
 
-        List<ItemReport> candidates;
-        if (report.isLost()) {
-            candidates = reportDao.findByTypeAndStatus(ReportType.FOUND, ReportStatus.OPEN);
-        } else {
-            candidates = reportDao.findByTypeAndStatus(ReportType.LOST, ReportStatus.OPEN);
-        }
+        List<ItemReport> candidates = reportDao.findByTypeAndStatus(
+                report.isLost() ? ReportType.FOUND : ReportType.LOST, ReportStatus.OPEN);
 
         boolean matchFound = false;
-
         for (ItemReport candidate : candidates) {
             ItemReport lost = report.isLost() ? report : candidate;
             ItemReport found = report.isFound() ? report : candidate;
 
-            // Skip if match already exists
-            if (matchDao.exists(lost.getId(), found.getId())) {
-                continue;
-            }
+            if (matchDao.exists(lost.getId(), found.getId())) continue;
 
             Match match = calculateMatch(lost, found);
-
             if (match.getTotalScore() >= MATCH_THRESHOLD) {
                 match.setStatus(MatchStatus.POTENTIAL);
                 matchDao.save(match);
@@ -80,67 +64,42 @@ public class MatchingService {
         }
 
         if (matchFound) {
-            Notification notification = new Notification();
-            notification.setUserId(report.getUserId());
-            notification.setTitle("Potential Match Found!");
-            notification.setMessage("We found potential matches for your " +
-                    (report.isLost() ? "lost" : "found") + " item: \"" + report.getTitle() + "\". Check your matches.");
-            notification.setTargetUrl("/matches/" + reportId);
-            notification.setType(NotificationType.NEW_MATCH);
-            notification.setRead(false);
-            notification.setCreatedAt(LocalDateTime.now());
-            notificationDao.save(notification);
+            notifyUser(report.getUserId(), "Potential Match Found!",
+                    "We found potential matches for your " + (report.isLost() ? "lost" : "found") +
+                            " item: \"" + report.getTitle() + "\". Check your matches.");
         }
     }
 
     /**
-     * Calculates the match score between a lost and a found report.
-     * Returns a Match object with individual component scores and an explanation.
+     * Calculates the match score between a lost and a found report using the 100-point rubric.
      */
     public Match calculateMatch(ItemReport lost, ItemReport found) {
         Match match = new Match();
         match.setLostReportId(lost.getId());
         match.setFoundReportId(found.getId());
 
-        // Category score: exact match = full weight, else 0
-        double categoryScore = 0.0;
-        if (lost.getCategoryId() != null && found.getCategoryId() != null
-                && lost.getCategoryId().equals(found.getCategoryId())) {
-            categoryScore = CATEGORY_WEIGHT;
-        }
+        // 1. Category (25%)
+        boolean catMatch = lost.getCategoryId() != null && Objects.equals(lost.getCategoryId(), found.getCategoryId());
+        double categoryScore = catMatch ? CATEGORY_WEIGHT : 0.0;
 
-        // Location score: exact match = full weight, else 0
-        double locationScore = 0.0;
-        if (lost.getLocationId() != null && found.getLocationId() != null
-                && lost.getLocationId().equals(found.getLocationId())) {
-            locationScore = LOCATION_WEIGHT;
-        }
+        // 2. Location (25%)
+        boolean locMatch = lost.getLocationId() != null && Objects.equals(lost.getLocationId(), found.getLocationId());
+        double locationScore = locMatch ? LOCATION_WEIGHT : 0.0;
 
-        // Date score: similarity scaled by weight
-        double dateScore = 0.0;
-        if (lost.getEventDate() != null && found.getEventDate() != null) {
-            double dateSimilarity = DateComparisonUtil.calculateDateSimilarity(
-                    lost.getEventDate(), found.getEventDate());
-            dateScore = dateSimilarity * DATE_WEIGHT / 100.0;
-        }
+        // 3. Date (20%)
+        double dateScore = (lost.getEventDate() != null && found.getEventDate() != null)
+                ? DateComparisonUtil.calculateDateSimilarity(lost.getEventDate(), found.getEventDate()) * DATE_WEIGHT / 100.0
+                : 0.0;
 
-        // Color score: similarity scaled by weight
-        double colorScore = 0.0;
-        if (lost.getColor() != null && found.getColor() != null
-                && !lost.getColor().isEmpty() && !found.getColor().isEmpty()) {
-            double colorSimilarity = TextSimilarityUtil.calculateColorSimilarity(
-                    lost.getColor(), found.getColor());
-            colorScore = colorSimilarity * COLOR_WEIGHT / 100.0;
-        }
+        // 4. Color (15%)
+        double colorScore = (hasText(lost.getColor()) && hasText(found.getColor()))
+                ? TextSimilarityUtil.calculateColorSimilarity(lost.getColor(), found.getColor()) * COLOR_WEIGHT / 100.0
+                : 0.0;
 
-        // Description score: Jaccard similarity scaled by weight
-        double descriptionScore = 0.0;
-        if (lost.getDescription() != null && found.getDescription() != null
-                && !lost.getDescription().isEmpty() && !found.getDescription().isEmpty()) {
-            double descSimilarity = TextSimilarityUtil.calculateJaccardSimilarity(
-                    lost.getDescription(), found.getDescription());
-            descriptionScore = descSimilarity * DESCRIPTION_WEIGHT / 100.0;
-        }
+        // 5. Description (15%)
+        double descriptionScore = (hasText(lost.getDescription()) && hasText(found.getDescription()))
+                ? TextSimilarityUtil.calculateJaccardSimilarity(lost.getDescription(), found.getDescription()) * DESCRIPTION_WEIGHT / 100.0
+                : 0.0;
 
         double totalScore = categoryScore + locationScore + dateScore + colorScore + descriptionScore;
 
@@ -151,54 +110,33 @@ public class MatchingService {
         match.setDescriptionScore(descriptionScore);
         match.setTotalScore(totalScore);
 
-        // Build explainable breakdown
-        StringBuilder explanation = new StringBuilder();
-        explanation.append(String.format("Category: %.1f/%.0f", categoryScore, CATEGORY_WEIGHT));
-        explanation.append(categoryScore > 0 ? " (exact match)" : " (different)");
-        explanation.append(String.format(" | Location: %.1f/%.0f", locationScore, LOCATION_WEIGHT));
-        explanation.append(locationScore > 0 ? " (exact match)" : " (different)");
-        explanation.append(String.format(" | Date: %.1f/%.0f", dateScore, DATE_WEIGHT));
-        explanation.append(String.format(" | Color: %.1f/%.0f", colorScore, COLOR_WEIGHT));
-        explanation.append(String.format(" | Description: %.1f/%.0f", descriptionScore, DESCRIPTION_WEIGHT));
-        explanation.append(String.format(" | TOTAL: %.1f/100", totalScore));
-        match.setExplanation(explanation.toString());
+        match.setExplanation(String.format(
+                "Category: %.1f/%.0f (%s) | Location: %.1f/%.0f (%s) | Date: %.1f/%.0f | Color: %.1f/%.0f | Description: %.1f/%.0f | TOTAL: %.1f/100",
+                categoryScore, CATEGORY_WEIGHT, catMatch ? "exact match" : "different",
+                locationScore, LOCATION_WEIGHT, locMatch ? "exact match" : "different",
+                dateScore, DATE_WEIGHT, colorScore, COLOR_WEIGHT, descriptionScore, DESCRIPTION_WEIGHT, totalScore));
 
         return match;
     }
 
     /**
      * Enhanced AI matching leveraging Groq real-time semantic analysis.
-     * Combines the deterministic 100-point campus rubric with deep LLM reasoning.
      */
     public Match calculateAiMatch(ItemReport lost, ItemReport found) {
-        Match baseline = calculateMatch(lost, found);
+        Match match = calculateMatch(lost, found);
         try {
-            GroqAiService.AiMatchAssessment aiAssessment = groqAiService.evaluateMatch(lost, found);
-            if (aiAssessment != null) {
-                baseline.setTotalScore(aiAssessment.totalScore);
-                if (aiAssessment.categoryScore > 0) baseline.setCategoryScore(aiAssessment.categoryScore);
-                if (aiAssessment.locationScore > 0) baseline.setLocationScore(aiAssessment.locationScore);
-                if (aiAssessment.dateScore > 0) baseline.setDateScore(aiAssessment.dateScore);
-                if (aiAssessment.colorScore > 0) baseline.setColorScore(aiAssessment.colorScore);
-                if (aiAssessment.descriptionScore > 0) baseline.setDescriptionScore(aiAssessment.descriptionScore);
-                baseline.setExplanation(aiAssessment.explanation);
+            GroqAiService.AiMatchAssessment ai = groqAiService.evaluateMatch(lost, found);
+            if (ai != null) {
+                match.setTotalScore(ai.totalScore);
+                if (ai.categoryScore > 0) match.setCategoryScore(ai.categoryScore);
+                if (ai.locationScore > 0) match.setLocationScore(ai.locationScore);
+                if (ai.dateScore > 0) match.setDateScore(ai.dateScore);
+                if (ai.colorScore > 0) match.setColorScore(ai.colorScore);
+                if (ai.descriptionScore > 0) match.setDescriptionScore(ai.descriptionScore);
+                match.setExplanation(ai.explanation);
             }
-        } catch (Exception ignore) {}
-        return baseline;
-    }
-
-    /**
-     * Gets all matches relevant to a user (matches involving their reports).
-     */
-    public List<Match> getMatchesForUser(Long userId) {
-        return matchDao.findMatchesForUser(userId);
-    }
-
-    /**
-     * Gets all matches across the entire campus.
-     */
-    public List<Match> getAllMatches() {
-        return matchDao.findAll();
+        } catch (Exception ignored) {}
+        return match;
     }
 
     /**
@@ -207,7 +145,7 @@ public class MatchingService {
      */
     public List<Match> searchFoundMatches(ItemReport queryLost) {
         List<ItemReport> openFound = reportDao.findByTypeAndStatus(ReportType.FOUND, ReportStatus.OPEN);
-        List<Match> results = new java.util.ArrayList<>();
+        List<Match> results = new ArrayList<>();
         for (ItemReport found : openFound) {
             Match m = calculateAiMatch(queryLost, found);
             m.setFoundTitle(found.getTitle());
@@ -217,7 +155,7 @@ public class MatchingService {
             m.setFoundImage(found.getImagePath());
             m.setFinderPhone(found.getContactPhone());
             m.setFinderName(found.getUserName());
-            if (m.getTotalScore() >= 45.0) { // Return relevant candidates
+            if (m.getTotalScore() >= 45.0) {
                 results.add(m);
             }
         }
@@ -225,19 +163,20 @@ public class MatchingService {
         return results;
     }
 
-    /**
-     * Gets all high-confidence matches (score >= 85).
-     */
+    public List<Match> getMatchesForUser(Long userId) {
+        return matchDao.findMatchesForUser(userId);
+    }
+
+    public List<Match> getAllMatches() {
+        return matchDao.findAll();
+    }
+
     public List<Match> getHighConfidenceMatches() {
         return matchDao.findByMinScore(HIGH_CONFIDENCE_THRESHOLD);
     }
 
     /**
-     * Executes the AI rule-based matching engine across all open lost and found items.
-     * Evaluates Category (25%), Location (25%), Date Chronology (20%), Color (15%),
-     * and Title/Description similarity (15%). 100% free, runs completely offline on device.
-     *
-     * @return count of newly discovered potential matches
+     * Runs the matching engine across all open lost and found items.
      */
     public int runMatchingEngine() {
         List<ItemReport> lostReports = reportDao.findByTypeAndStatus(ReportType.LOST, ReportStatus.OPEN);
@@ -246,42 +185,41 @@ public class MatchingService {
 
         for (ItemReport lost : lostReports) {
             for (ItemReport found : foundReports) {
-                if (matchDao.exists(lost.getId(), found.getId())) {
-                    continue;
-                }
+                if (matchDao.exists(lost.getId(), found.getId())) continue;
+
                 Match match = calculateAiMatch(lost, found);
                 if (match.getTotalScore() >= MATCH_THRESHOLD) {
                     match.setStatus(MatchStatus.POTENTIAL);
                     matchDao.save(match);
                     newMatches++;
 
-                    // Send notification to both reporting users
-                    try {
-                        Notification nLost = new Notification();
-                        nLost.setUserId(lost.getUserId());
-                        nLost.setTitle("AI Match Discovered!");
-                        nLost.setMessage("Potential match (" + String.format("%.0f%%", match.getTotalScore()) +
-                                ") found for your lost item: '" + lost.getTitle() + "' with found item '" + found.getTitle() + "'.");
-                        nLost.setTargetUrl("/matches");
-                        nLost.setType(NotificationType.NEW_MATCH);
-                        nLost.setRead(false);
-                        nLost.setCreatedAt(LocalDateTime.now());
-                        notificationDao.save(nLost);
-
-                        Notification nFound = new Notification();
-                        nFound.setUserId(found.getUserId());
-                        nFound.setTitle("AI Match Discovered!");
-                        nFound.setMessage("Your found item '" + found.getTitle() + "' matches reported lost item '" +
-                                lost.getTitle() + "' (" + String.format("%.0f%%", match.getTotalScore()) + " match).");
-                        nFound.setTargetUrl("/matches");
-                        nFound.setType(NotificationType.NEW_MATCH);
-                        nFound.setRead(false);
-                        nFound.setCreatedAt(LocalDateTime.now());
-                        notificationDao.save(nFound);
-                    } catch (Exception ignored) {}
+                    String score = String.format("%.0f%%", match.getTotalScore());
+                    notifyUser(lost.getUserId(), "AI Match Discovered!",
+                            "Potential match (" + score + ") found for your lost item: '" + lost.getTitle() + "' with found item '" + found.getTitle() + "'.");
+                    notifyUser(found.getUserId(), "AI Match Discovered!",
+                            "Your found item '" + found.getTitle() + "' matches reported lost item '" + lost.getTitle() + "' (" + score + " match).");
                 }
             }
         }
         return newMatches;
+    }
+
+    private void notifyUser(Long userId, String title, String message) {
+        if (userId == null) return;
+        try {
+            Notification n = new Notification();
+            n.setUserId(userId);
+            n.setTitle(title);
+            n.setMessage(message);
+            n.setTargetUrl("/matches");
+            n.setType(NotificationType.NEW_MATCH);
+            n.setRead(false);
+            n.setCreatedAt(LocalDateTime.now());
+            notificationDao.save(n);
+        } catch (Exception ignored) {}
+    }
+
+    private static boolean hasText(String str) {
+        return str != null && !str.isBlank();
     }
 }

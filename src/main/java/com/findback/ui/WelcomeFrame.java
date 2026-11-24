@@ -384,25 +384,22 @@ public class WelcomeFrame extends JFrame {
     }
 
     /**
-     * Interactive grid showing campus belonging types.
-     * Clicking any item invites the user to sign in or register to browse it.
+     * Interactive grid showing campus belonging categories.
+     * Clean typography glassy pills with zero emojis or icon clutter.
+     * Clicking any category invites the user to sign in or register to browse it.
      */
     private JPanel createItemIconsGrid() {
-        JPanel grid = new JPanel(new GridLayout(2, 4, 12, 12));
+        JPanel grid = new JPanel(new GridLayout(2, 4, 10, 10));
         grid.setOpaque(false);
-        grid.setMaximumSize(new Dimension(460, 130));
+        grid.setMaximumSize(new Dimension(480, 84));
 
-        String[][] items = {
-                {"backpack", "Backpack"}, {"wallet", "Wallet"},
-                {"keys", "Keys"}, {"headphones", "Headphones"},
-                {"phone", "Phone"}, {"books", "Books"},
-                {"id_card", "ID Card"}, {"watch", "Watch"}
+        String[] items = {
+                "Backpack", "Wallet", "Keys", "Headphones",
+                "Phone", "Books", "ID Card", "Watch"
         };
 
-        for (String[] item : items) {
-            final String itemKey = item[0];
-            final String itemName = item[1];
-            JPanel cell = new JPanel(new BorderLayout(0, 4)) {
+        for (String itemName : items) {
+            JPanel cell = new JPanel(new GridBagLayout()) {
                 private boolean hovered = false;
 
                 {
@@ -431,101 +428,29 @@ public class WelcomeFrame extends JFrame {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     // Frosted glass effect
-                    Color bg = hovered ? new Color(255, 255, 255, 50) : new Color(255, 255, 255, 22);
+                    Color bg = hovered ? new Color(255, 255, 255, 45) : new Color(255, 255, 255, 20);
                     g2.setColor(bg);
-                    g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 12, 12));
-                    // Luminous border
-                    g2.setColor(hovered ? new Color(147, 197, 253, 190) : new Color(255, 255, 255, 45));
-                    g2.setStroke(new BasicStroke(1f));
-                    g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, getWidth() - 1, getHeight() - 1, 12, 12));
+                    g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
+                    // Luminous glass border
+                    g2.setColor(hovered ? new Color(147, 197, 253, 200) : new Color(255, 255, 255, 40));
+                    g2.setStroke(new BasicStroke(1.1f));
+                    g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, getWidth() - 1, getHeight() - 1, 10, 10));
                     g2.dispose();
                     super.paintComponent(g);
                 }
             };
             cell.setOpaque(false);
             cell.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            cell.setBorder(new EmptyBorder(8, 6, 8, 6));
-
-            JComponent iconComp = new JComponent() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    g2.setColor(Color.WHITE);
-                    paintItemVectorIcon(g2, itemKey, getWidth(), getHeight());
-                    g2.dispose();
-                }
-
-                @Override
-                public Dimension getPreferredSize() {
-                    return new Dimension(40, 26);
-                }
-            };
-            cell.add(iconComp, BorderLayout.CENTER);
+            cell.setPreferredSize(new Dimension(108, 36));
 
             JLabel nameLabel = new JLabel(itemName, SwingConstants.CENTER);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            nameLabel.setForeground(new Color(224, 242, 254));
-            cell.add(nameLabel, BorderLayout.SOUTH);
+            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            nameLabel.setForeground(new Color(241, 245, 249));
+            cell.add(nameLabel);
 
             grid.add(cell);
         }
         return grid;
-    }
-
-    private static void paintItemVectorIcon(Graphics2D g2, String key, int w, int h) {
-        int cx = w / 2;
-        int cy = h / 2;
-        switch (key) {
-            case "backpack":
-                g2.drawRoundRect(cx - 9, cy - 7, 18, 20, 5, 5);
-                g2.drawArc(cx - 5, cy - 12, 10, 8, 0, 180);
-                g2.drawRoundRect(cx - 6, cy + 3, 12, 8, 3, 3);
-                break;
-            case "wallet":
-                g2.drawRoundRect(cx - 11, cy - 7, 22, 16, 4, 4);
-                g2.drawLine(cx - 11, cy - 1, cx + 11, cy - 1);
-                g2.drawRoundRect(cx + 3, cy - 4, 6, 6, 2, 2);
-                break;
-            case "keys":
-                g2.drawOval(cx - 9, cy - 8, 10, 10);
-                g2.drawLine(cx + 1, cy - 2, cx + 10, cy + 7);
-                g2.drawLine(cx + 6, cy + 3, cx + 9, cy);
-                g2.drawLine(cx + 8, cy + 5, cx + 11, cy + 2);
-                break;
-            case "headphones":
-                g2.drawArc(cx - 10, cy - 10, 20, 18, 0, 180);
-                g2.drawRoundRect(cx - 11, cy - 2, 4, 10, 2, 2);
-                g2.drawRoundRect(cx + 7, cy - 2, 4, 10, 2, 2);
-                break;
-            case "phone":
-                g2.drawRoundRect(cx - 7, cy - 10, 14, 21, 3, 3);
-                g2.drawLine(cx - 3, cy - 7, cx + 3, cy - 7);
-                g2.drawOval(cx - 2, cy + 6, 4, 4);
-                break;
-            case "books":
-                g2.drawRoundRect(cx - 9, cy - 7, 18, 5, 2, 2);
-                g2.drawRoundRect(cx - 11, cy - 1, 22, 5, 2, 2);
-                g2.drawRoundRect(cx - 8, cy + 5, 16, 5, 2, 2);
-                break;
-            case "id_card":
-                g2.drawRoundRect(cx - 11, cy - 8, 22, 16, 3, 3);
-                g2.drawRect(cx - 8, cy - 4, 5, 5);
-                g2.drawLine(cx - 1, cy - 3, cx + 7, cy - 3);
-                g2.drawLine(cx - 1, cy, cx + 7, cy);
-                break;
-            case "watch":
-                g2.drawOval(cx - 6, cy - 6, 12, 12);
-                g2.drawRoundRect(cx - 3, cy - 11, 6, 5, 2, 2);
-                g2.drawRoundRect(cx - 3, cy + 6, 6, 5, 2, 2);
-                g2.drawLine(cx, cy, cx, cy - 3);
-                g2.drawLine(cx, cy, cx + 3, cy);
-                break;
-            default:
-                g2.drawOval(cx - 6, cy - 6, 12, 12);
-                break;
-        }
     }
 
     /**
