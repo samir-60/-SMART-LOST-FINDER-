@@ -66,24 +66,15 @@ public class MatchesPanel extends JPanel implements MainFrame.Refreshable {
         title.setForeground(FindBackTheme.TEXT);
         titleRow.add(title);
 
-        // Clean typography badge without broken emojis
-        JLabel aiBadge = new JLabel("[AI] Powered by Groq Real-Time AI") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(237, 233, 254));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
-                g2.setColor(new Color(139, 92, 246));
-                g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
+        // Clean typography badge
+        JLabel aiBadge = new JLabel("Powered by Groq AI");
         aiBadge.setFont(FindBackTheme.getHeaderFont(11));
         aiBadge.setForeground(new Color(109, 40, 217));
-        aiBadge.setBorder(new EmptyBorder(4, 10, 4, 10));
+        aiBadge.setOpaque(true);
+        aiBadge.setBackground(new Color(237, 233, 254));
+        aiBadge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(196, 181, 253), 1, true),
+                new EmptyBorder(4, 10, 4, 10)));
         titleRow.add(aiBadge);
 
         // Filter Toggle in Header

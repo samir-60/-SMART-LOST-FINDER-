@@ -18,12 +18,7 @@ import java.io.InputStream;
 
 /**
  * FindBack — Welcome Screen & Landing Portal.
- * Features:
- * - High-resolution Metropolitan University campus aerial background with cinematic sapphire overlay.
- * - Animated living typography for "WELCOME TO METROPOLITAN UNIVERSITY".
- * - Glassmorphism hero cards and category visual badges.
- * - Crystal clear glassy action buttons (Login & Register).
- * - Real-time live campus statistics queried directly from the database.
+ * Clean, human-written Java Swing interface using FlatLaf and campus branding.
  */
 public class WelcomeFrame extends JFrame {
 
@@ -40,9 +35,7 @@ public class WelcomeFrame extends JFrame {
                     campusImage = ImageIO.read(f);
                 }
             }
-        } catch (Exception e) {
-            System.err.println("Could not load campus image: " + e.getMessage());
-        }
+        } catch (Exception ignored) {}
     }
 
     private JLabel foundValLabel;
@@ -53,9 +46,8 @@ public class WelcomeFrame extends JFrame {
         setTitle("FindBack — Metropolitan University Smart Lost & Found Portal");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setMinimumSize(new Dimension(1160, 700));
+        setMinimumSize(new Dimension(1100, 680));
 
-        // Root container with full campus background & atmospheric overlay
         CampusBackgroundPanel mainPanel = new CampusBackgroundPanel();
         mainPanel.setLayout(new GridBagLayout());
 
@@ -63,26 +55,20 @@ public class WelcomeFrame extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weighty = 1.0;
 
-        // Left Hero Side (60% width)
+        // Left Hero Side (60%)
         gbc.gridx = 0;
         gbc.weightx = 0.60;
         mainPanel.add(createLeftHeroPanel(), gbc);
 
-        // Right Info Side (40% width)
+        // Right Info Side (40%)
         gbc.gridx = 1;
         gbc.weightx = 0.40;
         mainPanel.add(createRightPanel(), gbc);
 
         setContentPane(mainPanel);
-
-        // Load live statistics in background thread to avoid freezing UI
         loadRealStatsAsync();
     }
 
-    /**
-     * Left hero panel featuring the university badge, animated header,
-     * portal branding, lost belongings interactive icons, and glassy buttons.
-     */
     private JPanel createLeftHeroPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setOpaque(false);
@@ -92,43 +78,54 @@ public class WelcomeFrame extends JFrame {
         content.setOpaque(false);
         content.setBorder(new EmptyBorder(30, 48, 30, 24));
 
-        // 1. University Badge
-        JPanel badge = createUniversityBadge();
+        // 1. Campus Badge
+        JPanel badge = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(37, 99, 235, 140));
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 12, 12));
+                g2.setColor(new Color(147, 197, 253, 180));
+                g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, getWidth() - 1, getHeight() - 1, 12, 12));
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        badge.setOpaque(false);
+        badge.setMaximumSize(new Dimension(420, 30));
+        JLabel textLabel = new JLabel("METROPOLITAN UNIVERSITY • SYLHET, BANGLADESH");
+        textLabel.setFont(FindBackTheme.getHeaderFont(11));
+        textLabel.setForeground(new Color(224, 242, 254));
+        badge.add(textLabel);
         badge.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(badge);
         content.add(Box.createVerticalStrut(14));
 
-        // 2. Animated Unique Typography for "WELCOME TO METROPOLITAN UNIVERSITY"
-        AnimatedUniversityHeader animatedHeader = new AnimatedUniversityHeader();
-        animatedHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
-        content.add(animatedHeader);
-        content.add(Box.createVerticalStrut(14));
+        // 2. Clear University Header
+        JLabel uniHeader = new JLabel("WELCOME TO METROPOLITAN UNIVERSITY");
+        uniHeader.setFont(FindBackTheme.getHeaderFont(22));
+        uniHeader.setForeground(new Color(224, 242, 254));
+        uniHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(uniHeader);
+        content.add(Box.createVerticalStrut(8));
 
         // 3. FindBack Main Title
         JLabel title = new JLabel("FindBack");
-        title.setFont(getUniqueHeaderFont(50));
+        title.setFont(FindBackTheme.getHeaderFont(48));
         title.setForeground(Color.WHITE);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(title);
-        content.add(Box.createVerticalStrut(4));
 
         // 4. Subtitle
         JLabel subtitle = new JLabel("Smart Lost & Found Portal");
-        subtitle.setFont(getUniqueHeaderFont(20));
+        subtitle.setFont(FindBackTheme.getHeaderFont(18));
         subtitle.setForeground(new Color(147, 197, 253));
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(subtitle);
         content.add(Box.createVerticalStrut(12));
 
-        // 5. Hero Accent Line
-        JLabel hero = new JLabel("Lost something? Find it back.");
-        hero.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        hero.setForeground(new Color(254, 240, 138)); // Warm golden amber highlight
-        hero.setAlignmentX(Component.LEFT_ALIGNMENT);
-        content.add(hero);
-        content.add(Box.createVerticalStrut(8));
-
-        // 6. Supporting Description
+        // 5. Supporting Description
         JLabel desc = new JLabel("<html><div style='width:460px; color:#dbeafe; font-size:13px; line-height:1.45;'>"
                 + "Official intelligent recovery portal for Metropolitan University students and faculty. "
                 + "Report lost items, discover found belongings, and let our explainable Smart Matching "
@@ -137,25 +134,21 @@ public class WelcomeFrame extends JFrame {
         content.add(desc);
         content.add(Box.createVerticalStrut(22));
 
-        // 7. Interactive Lost Belongings Grid (Backpacks, Wallets, Keys, Phone...)
-        JPanel iconsGrid = createItemIconsGrid();
-        iconsGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        content.add(iconsGrid);
+        // 6. Belonging Category Pills (Clean text chips without emojis)
+        JPanel categoryGrid = createCategoryGrid();
+        categoryGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(categoryGrid);
         content.add(Box.createVerticalStrut(26));
 
-        // 8. Action Buttons (Login & Register - Clear Glassy Premium Styling)
+        // 7. Action Buttons (Login & Register)
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
         buttonsPanel.setOpaque(false);
         buttonsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton loginBtn = createGlassWelcomeButton("Login", true);
-        loginBtn.setPreferredSize(new Dimension(165, 46));
-        loginBtn.setToolTipText("Access your student or administrator account");
+        JButton loginBtn = createWelcomeButton("Login", true);
         loginBtn.addActionListener(e -> openLoginDialog());
 
-        JButton registerBtn = createGlassWelcomeButton("Register", false);
-        registerBtn.setPreferredSize(new Dimension(165, 46));
-        registerBtn.setToolTipText("Create a new student account at Metropolitan University");
+        JButton registerBtn = createWelcomeButton("Register", false);
         registerBtn.addActionListener(e -> openRegisterDialog());
 
         buttonsPanel.add(loginBtn);
@@ -168,227 +161,7 @@ public class WelcomeFrame extends JFrame {
         return panel;
     }
 
-    /**
-     * Creates a premium glassy button with specular highlights,
-     * high-contrast antialiased typography, and tactile press states.
-     */
-    private JButton createGlassWelcomeButton(String text, boolean primary) {
-        JButton button = new JButton(text) {
-            private boolean hovered = false;
-            private boolean pressed = false;
-
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
-                    @Override public void mouseExited(MouseEvent e) { hovered = false; pressed = false; repaint(); }
-                    @Override public void mousePressed(MouseEvent e) { pressed = true; repaint(); }
-                    @Override public void mouseReleased(MouseEvent e) { pressed = false; repaint(); }
-                });
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
-
-                int w = getWidth();
-                int h = getHeight();
-                int arc = 14;
-
-                if (primary) {
-                    // Vibrant Royal Blue Glass (Login)
-                    Color topC = pressed ? new Color(29, 78, 216, 250) : (hovered ? new Color(59, 130, 246, 240) : new Color(37, 99, 235, 220));
-                    Color botC = pressed ? new Color(30, 58, 138, 255) : (hovered ? new Color(37, 99, 235, 250) : new Color(29, 78, 216, 235));
-                    g2.setPaint(new GradientPaint(0, 0, topC, 0, h, botC));
-                    g2.fillRoundRect(0, 0, w, h, arc, arc);
-
-                    // Specular glass highlight reflection
-                    g2.setPaint(new GradientPaint(0, 0, new Color(255, 255, 255, hovered ? 120 : 75), 0, h * 0.5f, new Color(255, 255, 255, 0)));
-                    g2.fillRoundRect(1, 1, w - 2, h / 2, arc, arc);
-
-                    // Luminous neon border
-                    g2.setColor(hovered ? new Color(255, 255, 255, 220) : new Color(147, 197, 253, 160));
-                    g2.setStroke(new BasicStroke(1.3f));
-                    g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
-                } else {
-                    // Frosted White Crystal Glass (Register)
-                    Color bg = pressed ? new Color(255, 255, 255, 60) : (hovered ? new Color(255, 255, 255, 45) : new Color(255, 255, 255, 25));
-                    g2.setColor(bg);
-                    g2.fillRoundRect(0, 0, w, h, arc, arc);
-
-                    // Specular reflection
-                    g2.setPaint(new GradientPaint(0, 0, new Color(255, 255, 255, hovered ? 90 : 50), 0, h * 0.5f, new Color(255, 255, 255, 0)));
-                    g2.fillRoundRect(1, 1, w - 2, h / 2, arc, arc);
-
-                    // Glass border
-                    g2.setColor(hovered ? new Color(255, 255, 255, 220) : new Color(224, 242, 254, 110));
-                    g2.setStroke(new BasicStroke(1.3f));
-                    g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
-                }
-
-                // High-contrast, bold, readable text with drop shadow
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 15));
-                FontMetrics fm = g2.getFontMetrics();
-                int x = (w - fm.stringWidth(getText())) / 2;
-                int y = (h + fm.getAscent() - fm.getDescent()) / 2 + (pressed ? 1 : 0);
-
-                // Deep text shadow for clarity against any background
-                g2.setColor(new Color(0, 0, 0, 140));
-                g2.drawString(getText(), x, y + 1);
-
-                g2.setColor(Color.WHITE);
-                g2.drawString(getText(), x, y);
-
-                g2.dispose();
-            }
-        };
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
-        button.setOpaque(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return button;
-    }
-
-    private JPanel createUniversityBadge() {
-        JPanel badge = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(37, 99, 235, 130));
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 16, 16));
-                g2.setColor(new Color(147, 197, 253, 190));
-                g2.setStroke(new BasicStroke(1f));
-                g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, getWidth() - 1, getHeight() - 1, 16, 16));
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        badge.setOpaque(false);
-        badge.setBorder(new EmptyBorder(4, 14, 4, 14));
-        badge.setMaximumSize(new Dimension(420, 32));
-
-        JLabel textLabel = new JLabel("METROPOLITAN UNIVERSITY • SYLHET, BANGLADESH");
-        textLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        textLabel.setForeground(new Color(224, 242, 254));
-
-        badge.add(textLabel);
-        return badge;
-    }
-
-    /**
-     * Animated header component:
-     * - Typewriter character-by-character reveal for "WELCOME TO METROPOLITAN UNIVERSITY".
-     * - Continuous smooth cyan-amber-white shimmer wave with mathematically safe gradient coordinates.
-     */
-    private static class AnimatedUniversityHeader extends JComponent {
-        private static final String FULL_TEXT = "WELCOME TO METROPOLITAN UNIVERSITY";
-        private int revealedChars = 0;
-        private float shimmerOffset = 0.0f;
-        private boolean typingDone = false;
-        private boolean showCursor = true;
-        private final Timer animationTimer;
-
-        public AnimatedUniversityHeader() {
-            setPreferredSize(new Dimension(580, 48));
-            setMaximumSize(new Dimension(650, 48));
-
-            animationTimer = new Timer(35, e -> {
-                // Typewriter effect
-                if (!typingDone) {
-                    if (revealedChars < FULL_TEXT.length()) {
-                        revealedChars++;
-                    } else {
-                        typingDone = true;
-                    }
-                }
-                // Continuous shimmer wave
-                shimmerOffset += 0.035f;
-                if (shimmerOffset > 2.0f) {
-                    shimmerOffset = 0.0f;
-                }
-                // Cursor blink
-                showCursor = (System.currentTimeMillis() % 600 < 300);
-                repaint();
-            });
-            animationTimer.start();
-        }
-
-        @Override
-        public void removeNotify() {
-            super.removeNotify();
-            if (animationTimer != null && animationTimer.isRunning()) {
-                animationTimer.stop();
-            }
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
-
-            Font font = getUniqueHeaderFont(24);
-            g2.setFont(font);
-
-            String textToDraw = FULL_TEXT.substring(0, Math.min(revealedChars, FULL_TEXT.length()));
-
-            // Legible shadow behind the text
-            g2.setColor(new Color(0, 0, 0, 180));
-            g2.drawString(textToDraw, 2, 34);
-
-            // Shimmer gradient across the letters (strictly non-equal start and end points)
-            float width = Math.max(100f, getWidth());
-            float startX = (shimmerOffset - 0.5f) * width;
-            float endX = startX + Math.max(120f, width * 0.6f);
-
-            Color[] colors = new Color[]{
-                    new Color(255, 255, 255),
-                    new Color(96, 165, 250),
-                    new Color(254, 240, 138),
-                    new Color(255, 255, 255)
-            };
-            float[] fractions = new float[]{0.0f, 0.45f, 0.75f, 1.0f};
-
-            LinearGradientPaint gradient = new LinearGradientPaint(
-                    startX, 20, endX, 20,
-                    fractions, colors, MultipleGradientPaint.CycleMethod.REPEAT
-            );
-            g2.setPaint(gradient);
-            g2.drawString(textToDraw, 0, 32);
-
-            // Animated typing cursor
-            if (!typingDone && showCursor) {
-                FontMetrics fm = g2.getFontMetrics();
-                int curX = fm.stringWidth(textToDraw) + 4;
-                g2.setColor(new Color(254, 240, 138));
-                g2.fillRect(curX, 14, 3, 20);
-            }
-
-            g2.dispose();
-        }
-    }
-
-    private static Font getUniqueHeaderFont(int size) {
-        String[] fontNames = {"Century Gothic", "Segoe UI Variable Display", "Segoe UI Semibold", "Segoe UI", "Trebuchet MS"};
-        for (String name : fontNames) {
-            Font f = new Font(name, Font.BOLD, size);
-            if (f.getFamily().equalsIgnoreCase(name) || f.getName().equalsIgnoreCase(name)) {
-                return f;
-            }
-        }
-        return new Font("Segoe UI", Font.BOLD, size);
-    }
-
-    /**
-     * Interactive grid showing campus belonging categories.
-     * Clean typography glassy pills with zero emojis or icon clutter.
-     * Clicking any category invites the user to sign in or register to browse it.
-     */
-    private JPanel createItemIconsGrid() {
+    private JPanel createCategoryGrid() {
         JPanel grid = new JPanel(new GridLayout(2, 4, 10, 10));
         grid.setOpaque(false);
         grid.setMaximumSize(new Dimension(480, 84));
@@ -401,39 +174,21 @@ public class WelcomeFrame extends JFrame {
         for (String itemName : items) {
             JPanel cell = new JPanel(new GridBagLayout()) {
                 private boolean hovered = false;
-
                 {
                     addMouseListener(new MouseAdapter() {
-                        @Override
-                        public void mouseEntered(MouseEvent e) {
-                            hovered = true;
-                            repaint();
-                        }
-
-                        @Override
-                        public void mouseExited(MouseEvent e) {
-                            hovered = false;
-                            repaint();
-                        }
-
-                        @Override
-                        public void mouseClicked(MouseEvent e) {
-                            openLoginDialog();
-                        }
+                        @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
+                        @Override public void mouseExited(MouseEvent e) { hovered = false; repaint(); }
+                        @Override public void mouseClicked(MouseEvent e) { openLoginDialog(); }
                     });
                 }
-
                 @Override
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    // Frosted glass effect
                     Color bg = hovered ? new Color(255, 255, 255, 45) : new Color(255, 255, 255, 20);
                     g2.setColor(bg);
                     g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
-                    // Luminous glass border
                     g2.setColor(hovered ? new Color(147, 197, 253, 200) : new Color(255, 255, 255, 40));
-                    g2.setStroke(new BasicStroke(1.1f));
                     g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, getWidth() - 1, getHeight() - 1, 10, 10));
                     g2.dispose();
                     super.paintComponent(g);
@@ -444,7 +199,7 @@ public class WelcomeFrame extends JFrame {
             cell.setPreferredSize(new Dimension(108, 36));
 
             JLabel nameLabel = new JLabel(itemName, SwingConstants.CENTER);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            nameLabel.setFont(FindBackTheme.getHeaderFont(12));
             nameLabel.setForeground(new Color(241, 245, 249));
             cell.add(nameLabel);
 
@@ -453,29 +208,41 @@ public class WelcomeFrame extends JFrame {
         return grid;
     }
 
-    /**
-     * Right-hand card displaying the 4-step recovery process and live database stats.
-     */
+    private JButton createWelcomeButton(String text, boolean primary) {
+        JButton button = new JButton(text);
+        button.setFont(FindBackTheme.getHeaderFont(15));
+        button.setFocusPainted(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setPreferredSize(new Dimension(160, 44));
+        if (primary) {
+            button.setBackground(FindBackTheme.SECONDARY);
+            button.setForeground(Color.WHITE);
+        } else {
+            button.setBackground(new Color(255, 255, 255, 30));
+            button.setForeground(Color.WHITE);
+            button.setBorder(BorderFactory.createLineBorder(new Color(255, 255, 255, 90), 1, true));
+        }
+        button.putClientProperty("JButton.buttonType", "roundRect");
+        return button;
+    }
+
     private JPanel createRightPanel() {
         JPanel wrapper = new JPanel(new GridBagLayout());
         wrapper.setOpaque(false);
 
-        // Glassmorphism Container Card
-        RoundedPanel card = new RoundedPanel(18, new Color(255, 255, 255, 235));
+        RoundedPanel card = new RoundedPanel(18, new Color(255, 255, 255, 240));
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(new EmptyBorder(32, 32, 32, 32));
-        card.setMaximumSize(new Dimension(460, 600));
+        card.setMaximumSize(new Dimension(460, 560));
 
         JLabel header = new JLabel("How It Works");
-        header.setFont(getUniqueHeaderFont(24));
+        header.setFont(FindBackTheme.getHeaderFont(24));
         header.setForeground(FindBackTheme.TEXT);
-        header.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(header);
 
         JLabel sub = new JLabel("Fast, transparent lost & found process");
         sub.setFont(FindBackTheme.getBodyFont(13));
         sub.setForeground(new Color(100, 115, 135));
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(sub);
         card.add(Box.createVerticalStrut(20));
 
@@ -493,10 +260,9 @@ public class WelcomeFrame extends JFrame {
 
         card.add(Box.createVerticalStrut(22));
 
-        // University Campus Live Real Stats Row
+        // Live Real Database Stats
         JPanel statsPanel = new JPanel(new GridLayout(1, 3, 12, 0));
         statsPanel.setOpaque(false);
-        statsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         statsPanel.setMaximumSize(new Dimension(420, 75));
 
         foundValLabel = new JLabel("...", SwingConstants.CENTER);
@@ -519,25 +285,11 @@ public class WelcomeFrame extends JFrame {
     private JPanel createStepRow(String stepNum, String title, String desc) {
         JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setOpaque(false);
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Circular numbered badge
-        JLabel numBadge = new JLabel(stepNum, SwingConstants.CENTER) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(239, 246, 255));
-                g2.fillOval(0, 0, getWidth() - 1, getHeight() - 1);
-                g2.setColor(new Color(37, 99, 235));
-                g2.setStroke(new BasicStroke(1.2f));
-                g2.drawOval(0, 0, getWidth() - 1, getHeight() - 1);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
+        JLabel numBadge = new JLabel(stepNum, SwingConstants.CENTER);
         numBadge.setFont(FindBackTheme.getHeaderFont(12));
-        numBadge.setForeground(new Color(37, 99, 235));
+        numBadge.setForeground(FindBackTheme.SECONDARY);
+        numBadge.setBorder(BorderFactory.createLineBorder(FindBackTheme.SECONDARY, 1, true));
         numBadge.setPreferredSize(new Dimension(28, 28));
         row.add(numBadge, BorderLayout.WEST);
 
@@ -546,7 +298,7 @@ public class WelcomeFrame extends JFrame {
         textPanel.setOpaque(false);
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        titleLabel.setFont(FindBackTheme.getHeaderFont(13));
         titleLabel.setForeground(FindBackTheme.TEXT);
         textPanel.add(titleLabel);
 
@@ -563,40 +315,35 @@ public class WelcomeFrame extends JFrame {
         box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
         box.setBorder(new EmptyBorder(10, 8, 10, 8));
 
-        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        valueLabel.setFont(FindBackTheme.getHeaderFont(18));
         valueLabel.setForeground(FindBackTheme.SECONDARY);
         valueLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         box.add(valueLabel);
 
         JLabel lLabel = new JLabel(lbl, SwingConstants.CENTER);
-        lLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        lLabel.setFont(FindBackTheme.getBodyFont(10));
         lLabel.setForeground(new Color(100, 115, 135));
         lLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         box.add(lLabel);
-
         return box;
     }
 
-    /**
-     * Asynchronously queries real live statistics from the database
-     * without blocking UI startup or event handling.
-     */
     private void loadRealStatsAsync() {
         SwingWorker<long[], Void> worker = new SwingWorker<>() {
             @Override
             protected long[] doInBackground() {
-                long found = 0;
-                long matches = 0;
-                long recovered = 0;
                 try {
                     ReportService rs = new ReportService();
                     MatchingService ms = new MatchingService();
                     HandoverService hs = new HandoverService();
-                    found = rs.countFound();
-                    matches = ms.getHighConfidenceMatches().size();
-                    recovered = hs.countRecovered();
-                } catch (Exception ignore) {}
-                return new long[]{found, matches, recovered};
+                    return new long[]{
+                            rs.countFoundReports(),
+                            ms.getAllMatches().size(),
+                            hs.countCompleted()
+                    };
+                } catch (Exception e) {
+                    return new long[]{0, 0, 0};
+                }
             }
 
             @Override
@@ -606,32 +353,22 @@ public class WelcomeFrame extends JFrame {
                     if (foundValLabel != null) foundValLabel.setText(String.valueOf(res[0]));
                     if (matchValLabel != null) matchValLabel.setText(String.valueOf(res[1]));
                     if (recValLabel != null) recValLabel.setText(String.valueOf(res[2]));
-                } catch (Exception ignore) {}
+                } catch (Exception ignored) {}
             }
         };
         worker.execute();
     }
 
-    /**
-     * Root background panel that renders the Metropolitan University aerial photo
-     * with an atmospheric dark sapphire overlay for contrast.
-     */
     private static class CampusBackgroundPanel extends JPanel {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-
             int w = getWidth();
             int h = getHeight();
 
             if (campusImage != null) {
-                // High-fidelity cover-crop aspect ratio calculation
                 double imgAspect = (double) campusImage.getWidth() / campusImage.getHeight();
                 double panelAspect = (double) w / h;
-
                 int drawW, drawH, drawX, drawY;
                 if (panelAspect > imgAspect) {
                     drawW = w;
@@ -644,37 +381,25 @@ public class WelcomeFrame extends JFrame {
                     drawX = (w - drawW) / 2;
                     drawY = 0;
                 }
-                g2.drawImage(campusImage, drawX, drawY, drawW, drawH, null);
+                g.drawImage(campusImage, drawX, drawY, drawW, drawH, null);
             } else {
-                g2.setColor(FindBackTheme.PRIMARY);
-                g2.fillRect(0, 0, w, h);
+                g.setColor(FindBackTheme.PRIMARY);
+                g.fillRect(0, 0, w, h);
             }
 
-            // Cinematic atmospheric gradient overlay: deep navy on the left for text contrast
-            LinearGradientPaint overlay = new LinearGradientPaint(
-                    0, 0, w, 0,
-                    new float[]{0.0f, 0.55f, 0.85f, 1.0f},
-                    new Color[]{
-                            new Color(10, 25, 47, 235), // Deep sapphire navy
-                            new Color(15, 35, 65, 215),
-                            new Color(10, 25, 47, 180),
-                            new Color(10, 20, 38, 220)
-                    }
-            );
-            g2.setPaint(overlay);
+            // Dark overlay for readability
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setPaint(new GradientPaint(0, 0, new Color(10, 25, 47, 235), w, 0, new Color(10, 20, 38, 200)));
             g2.fillRect(0, 0, w, h);
-
             g2.dispose();
         }
     }
 
     private void openLoginDialog() {
-        LoginDialog dialog = new LoginDialog(this);
-        dialog.setVisible(true);
+        new LoginDialog(this).setVisible(true);
     }
 
     private void openRegisterDialog() {
-        RegisterDialog dialog = new RegisterDialog(this);
-        dialog.setVisible(true);
+        new RegisterDialog(this).setVisible(true);
     }
 }
